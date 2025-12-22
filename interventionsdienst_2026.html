@@ -22,6 +22,10 @@
             /* Status Colors */
             --status-service: #10b981;
             /* Emerald 500 */
+            --status-possible: #3b82f6;
+            /* Blue 500 */
+            --status-avoid: #f472b6;
+            /* Pink 400 */
 
             --status-weekend: #f1f5f9;
             --status-holiday: #f5f5f5;
@@ -418,7 +422,17 @@
         }
 
         .status-absent {
-            background-color: var(--status-absent);
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .status-possible {
+            background-color: var(--status-possible);
+            color: white;
+        }
+
+        .status-avoid {
+            background-color: var(--status-avoid);
             color: white;
         }
 
@@ -542,7 +556,17 @@
             <label
                 style="cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 5px; border: 1px solid #ddd;">
                 <input type="radio" name="mode" value="I" checked onchange="app.setMode('I')">
-                <span style="font-weight: bold; color: var(--status-service);">Dienst (I)</span>
+                <span style="font-weight: bold; color: var(--status-service);">Dienstwunsch (I)</span>
+            </label>
+            <label
+                style="cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                <input type="radio" name="mode" value="M" onchange="app.setMode('M')">
+                <span style="font-weight: bold; color: var(--status-possible);">Dienst möglich (M)</span>
+            </label>
+            <label
+                style="cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                <input type="radio" name="mode" value="K" onchange="app.setMode('K')">
+                <span style="font-weight: bold; color: var(--status-avoid);">Bitte kein Dienst (K)</span>
             </label>
             <label
                 style="cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 5px; border: 1px solid #ddd;">
@@ -553,7 +577,13 @@
 
         <div class="legend" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
             <div class="legend-item">
-                <div class="color-box" style="background:var(--status-service)"></div> Interventionsdienst
+                <div class="color-box" style="background:var(--status-service)"></div> Dienstwunsch
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background:var(--status-possible)"></div> Dienst möglich
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background:var(--status-avoid)"></div> Bitte kein Dienst
             </div>
             <div class="legend-item">
                 <div class="color-box" style="background: var(--danger-color); border: 1px solid var(--danger-color);">
@@ -962,11 +992,15 @@
                 // Update UI immediately (optimistic)
                 const cell = document.getElementById(`cell-${empId}-${dateStr}`);
                 if (cell) {
-                    cell.classList.remove('status-service', 'status-absent', 'has-text');
+                    cell.classList.remove('status-service', 'status-absent', 'status-possible', 'status-avoid', 'has-text');
                     if (this.state[empId][dateStr]) {
                         const st = this.state[empId][dateStr];
                         if (st.type === 'A') {
                             cell.classList.add('status-absent');
+                        } else if (st.type === 'M') {
+                            cell.classList.add('status-possible');
+                        } else if (st.type === 'K') {
+                            cell.classList.add('status-avoid');
                         } else {
                             cell.classList.add('status-service');
                         }
