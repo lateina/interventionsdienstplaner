@@ -1017,7 +1017,7 @@
                 // Update UI immediately (optimistic)
                 const cell = document.getElementById(`cell-${empId}-${dateStr}`);
                 if (cell) {
-                    cell.classList.remove('status-service', 'status-absent', 'status-possible', 'status-avoid', 'has-text');
+                    cell.classList.remove('status-service', 'status-absent', 'status-possible', 'status-avoid', 'status-assigned', 'has-text');
                     if (this.state[empId][dateStr]) {
                         const st = this.state[empId][dateStr];
                         if (st.type === 'A') {
