@@ -883,6 +883,12 @@
                 adminOpt.style.fontWeight = 'bold';
                 select.appendChild(adminOpt);
 
+                const sekOpt = document.createElement('option');
+                sekOpt.value = 'sekretariat';
+                sekOpt.innerText = 'Sekretariat (Nur Lesen)';
+                sekOpt.style.fontStyle = 'italic';
+                select.appendChild(sekOpt);
+
                 CONFIG.employees.forEach(emp => {
                     const opt = document.createElement('option');
                     opt.value = emp.id;
@@ -910,6 +916,8 @@
                         alert('Falsches Admin-Passwort!');
                         return;
                     }
+                } else if (empId === 'sekretariat') {
+                    // No PIN required for Sekretariat
                 } else {
                     const emp = CONFIG.employees.find(e => e.id === empId);
                     if (emp && emp.pin && pwdInput !== emp.pin) {
@@ -1851,7 +1859,7 @@
                     const btn = document.getElementById(`btn-finish-${i}`);
                     if (!btn) continue;
 
-                    if (!this.currentUser || this.currentUser === 'admin') {
+                    if (!this.currentUser || this.currentUser === 'admin' || this.currentUser === 'sekretariat') {
                         btn.style.display = 'none';
                         continue;
                     }
