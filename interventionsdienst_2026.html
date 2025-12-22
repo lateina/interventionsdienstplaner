@@ -1341,13 +1341,24 @@
                         const monthEl = document.createElement('div');
                         monthEl.className = 'cell header-cell sticky-header month-header';
                         monthEl.id = `month-header-${d.month}`;
-                        monthEl.id = `month-header-${d.month}`;
-                        // monthEl.innerText = monthName; // Removed to allow child elements
                         monthEl.style.gridColumnStart = colStart + index;
 
-                        // Wrapper for Flex layout (Name + Button)
+                        // Layout
                         monthEl.style.display = 'flex';
                         monthEl.style.alignItems = 'center';
+                        monthEl.style.justifyContent = 'space-between';
+
+                        let content = `<span>${monthName}</span>`;
+
+                        if (this.currentUser === 'admin') {
+                            content += `<button onclick="app.distributeServices(${d.month})" style="font-size:0.7rem; margin-left:10px; cursor:pointer;">Auto-Vert.</button>`;
+                        }
+
+                        // Finish button placeholder (appended later)
+                        content += `<button id="btn-finish-${d.month}" onclick="app.markMonthFinished(${d.month})" class="finish-btn" style="display:none; font-size:0.7rem;">Fertig</button>`;
+
+                        monthEl.innerHTML = content;
+                        container.appendChild(monthEl);
                         monthEl.style.justifyContent = 'center';
 
                         const titleSpan = document.createElement('span');
