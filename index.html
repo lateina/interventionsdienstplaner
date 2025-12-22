@@ -1676,13 +1676,141 @@
                 }
             }
 
-            hasWeekendService(monthIndex) {
+            hasWeekendService(monthIndex, empId = this.currentUser) {
                 const monthDates = this.dates.filter(d => d.month === monthIndex);
+                if (!monthDates.length) return false; // Safety
+
                 return monthDates.some(d => {
                     if (!d.isWeekend) return false;
-                    const status = this.state[this.currentUser]?.[d.dateStr];
-                    return status && status.type === 'I';
+                    const status = this.state[empId]?.[d.dateStr];
+                    // For Distribution: Check D or I. For Validation (User): Check I.
+                    // We check both for robustness.
+                    return status && (status.type === 'I' || status.type === 'D');
                 });
+            }
+
+            distributeServices(monthIndex) {
+                if (!confirm(`Dienste für Monat ${monthIndex + 1} automatisch verteilen? Bestehende Zuteilungen (Lila) werden überschrieben.`)) return;
+
+                const monthDates = this.dates.filter(d => d.month === monthIndex);
+
+                // 1. Clear existing 'D' assignments for this month
+                CONFIG.employees.forEach(emp => {
+                    if (!this.state[emp.id]) return;
+                    monthDates.forEach(d => {
+                        const st = this.state[emp.id][d.dateStr];
+                        if (st && st.type === 'D') {
+                            delete this.state[emp.id][d.dateStr];
+                        }
+                    });
+                });
+
+                // Helper to get score
+                const getScore = (empId, dateStr) => {
+                    const st = this.state[empId]?.[dateStr];
+                    if (!st) return 0;
+                    if (st.type === 'A') return -10000; // Forbidden
+                    if (st.type === 'I') return 100;
+                    if (st.type === 'M') return 10;
+                    if (st.type === 'K') return -100;
+                    return 0;
+                };
+
+                // Helper to check absence
+                const isAbsent = (empId, dateStr) => {
+                    const st = this.state[empId]?.[dateStr];
+                    return st && st.type === 'A';
+                };
+
+                // 2. Identify Friday-Sunday Blocks
+                const usageMap = {}; // dateStr -> assignedEmpId
+                const fridays = monthDates.filter(d => d.dayName === 'Fr');
+
+                fridays.forEach(fri => {
+                    const friDate = new Date(fri.date);
+                    const satDate = new Date(fri.date); satDate.setDate(friDate.getDate() + 1);
+                    const sunDate = new Date(fri.date); sunDate.setDate(friDate.getDate() + 2);
+
+                    const blockDates = [fri];
+                    const satObj = this.dates.find(d => d.date.getTime() === satDate.getTime());
+                    const sunObj = this.dates.find(d => d.date.getTime() === sunDate.getTime());
+
+                    if (satObj && satObj.month === monthIndex) blockDates.push(satObj);
+                    if (sunObj && sunObj.month === monthIndex) blockDates.push(sunObj);
+
+                    // Find best candidate
+                    let bestEmp = null;
+                    let bestScore = -Infinity;
+
+                    CONFIG.employees.forEach(emp => {
+                        // Check if absent on ANY day
+                        if (blockDates.some(d => isAbsent(emp.id, d.dateStr))) return;
+
+                        // Score
+                        let score = 0;
+
+                        // 2-Month Rule Bonus (Catch-up)
+                        if (monthIndex > 0) {
+                            if (!this.hasWeekendService(monthIndex - 1, emp.id)) {
+                                score += 1000;
+                            }
+                        }
+
+                        blockDates.forEach(d => {
+                            score += getScore(emp.id, d.dateStr);
+                        });
+
+                        // Random tie-break
+                        score += Math.random();
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestEmp = emp.id;
+                        }
+                    });
+
+                    // Assign
+                    if (bestEmp) {
+                        blockDates.forEach(d => {
+                            if (!this.state[bestEmp]) this.state[bestEmp] = {};
+                            this.state[bestEmp][d.dateStr] = { type: 'D' };
+                            usageMap[d.dateStr] = bestEmp;
+                        });
+                    }
+                });
+
+                // 3. Fill Weekdays (Mon-Thu)
+                monthDates.forEach(d => {
+                    if (usageMap[d.dateStr]) return; // Already assigned
+                    if (d.isWeekend) return;
+
+                    let bestEmp = null;
+                    let bestScore = -Infinity;
+
+                    CONFIG.employees.forEach(emp => {
+                        if (isAbsent(emp.id, d.dateStr)) return;
+
+                        // Skip if already assigned on this day (impossible if single slot, but good for safety)
+                        if (this.state[emp.id]?.[d.dateStr]?.type === 'D') return;
+
+                        let score = getScore(emp.id, d.dateStr);
+                        score += Math.random();
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestEmp = emp.id;
+                        }
+                    });
+
+                    if (bestEmp) {
+                        if (!this.state[bestEmp]) this.state[bestEmp] = {};
+                        this.state[bestEmp][d.dateStr] = { type: 'D' };
+                    }
+                });
+
+                this.saveState();
+                this.render();
+                alert('Dienste wurden automatisch verteilt.');
             }
 
             updateMonthButtons() {
