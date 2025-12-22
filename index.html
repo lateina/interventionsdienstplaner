@@ -1059,9 +1059,12 @@
                 this.dragEmpId = empId;
 
                 // Determine initial action based on clicked cell state
-                // If it HAS a service, we start REMOVING. If EMPTY, we start ADDING.
-                const hasService = !!(this.state[empId] && this.state[empId][dateStr]);
-                this.dragState = !hasService;
+                // If it HAS the SAME service type as current mode -> REMOVE.
+                // If Empty OR Different type -> ADD/REPLACE.
+                const currentCell = this.state[empId]?.[dateStr];
+                const isSameMode = currentCell && currentCell.type === this.currentMode;
+
+                this.dragState = !isSameMode;
 
                 // Apply to initial cell
                 this.setService(empId, dateStr, this.dragState, true); // skipSave true for performance
