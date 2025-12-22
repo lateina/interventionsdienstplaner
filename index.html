@@ -830,6 +830,7 @@
 
                     dates.push({
                         dateStr,
+                        date: new Date(date), // Fix: Store actual Date object
                         day: date.getDate(),
                         month: date.getMonth(), // 0-11
                         weekday: dayOfWeek,
