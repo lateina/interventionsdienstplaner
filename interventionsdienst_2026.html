@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interventionsdienst Planer 2026</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --primary-color: #059669;
+            --primary-hover: #047857;
+            --bg-color: #f8fafc;
+            --surface-color: #ffffff;
+            --text-main: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --success-color: #10b981;
+
+            /* Status Colors */
+            --status-service: #10b981;
+            /* Emerald 500 */
+
+            --status-weekend: #f1f5f9;
+            --status-holiday: #f5f5f5;
+
+            /* Spacing & Radius */
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            /* padding around the page */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: auto;
+            /* Allow horizontal scroll */
+        }
+
+        header {
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+            /* Flex removed, handling children specifically */
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: var(--bg-color);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        button.primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+        }
+
+        button.primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        /* Main Calendar Area */
+        main {
+            /* flex: 1; Removed to let content dictate height */
+            background: var(--surface-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            /* overflow: hidden; Removed */
+            position: relative;
+            display: block;
+            /* Normal block flow */
+            width: fit-content;
+            /* Ensure container expands for sticky */
+            min-width: 100%;
+        }
+
+
+
+        .calendar-container {
+            display: grid;
+            overflow-x: auto;
+            /* Restore horizontal scroll */
+            position: relative;
+            width: 100%;
+            height: auto;
+            /* Full height */
+            /* First col for names, rest for days. 365 days + 1 label col */
+            grid-template-columns: 250px repeat(365, 40px);
+            grid-template-rows: 30px 20px 140px repeat(8, 60px) 120px;
+        }
+
+        /* Sticky Columns/Rows */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: #ffffff;
+            /* Explicit opaque white */
+            z-index: 50;
+            /* Increased */
+            border-right: 1px solid var(--border-color);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            min-width: 250px;
+            /* Enforce width */
+            will-change: transform;
+            /* Hint for compositing */
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: var(--surface-color);
+            z-index: 40;
+            /* Increased */
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* High Z-Index for top-left intersection */
+        .sticky-corner {
+            z-index: 100;
+            /* Increased */
+        }
+
+        /* Grid Cells */
+        .cell {
+            padding: 5px;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+
+        .header-cell {
+            font-weight: 600;
+            color: var(--text-secondary);
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .month-header {
+            grid-row: 1;
+            background: #f1f5f9;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .day-header {
+            grid-row: 3;
+            /* height removed for grid compatibility */
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+
+        .header-holiday-text {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 0.65rem;
+            color: #555;
+            margin-top: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: 100px;
+        }
+
+        .employee-row-header {
+            justify-content: flex-start;
+            padding-left: 15px;
+            font-weight: 600;
+            background: var(--surface-color);
+        }
+
+        .employee-sub {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-left: 5px;
+        }
+
+        /* Interactive Cells */
+        .day-cell {
+            cursor: pointer;
+            transition: background 0.1s;
+            position: relative;
+        }
+
+        .day-cell:hover {
+            background-color: #f8fafc;
+        }
+
+        /* Cell Content (Text) */
+        .cell-text {
+            font-size: 0.6rem;
+            color: #333;
+            font-weight: bold;
+            pointer-events: none;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            padding: 0 2px;
+        }
+
+        .status-service {
+            background-color: var(--status-service) !important;
+            color: white;
+        }
+
+        .status-absent {
+            background: var(--danger-color) !important;
+            color: white;
+            position: relative;
+        }
+
+        .status-absent .cell-text {
+            color: white !important;
+        }
+
+        /* .status-absent:not(.has-text)::after removed */
+
+        .disabled-cell {
+            background-color: #e2e8f0;
+            /* Gray-200 */
+            pointer-events: none;
+            cursor: not-allowed;
+            background-image: repeating-linear-gradient(45deg, #cbd5e1 0, #cbd5e1 1px, transparent 0, transparent 50%);
+            background-size: 10px 10px;
+        }
+
+        /* Status Styles */
+        .weekend {
+            background-color: var(--status-weekend);
+        }
+
+        .holiday {
+            background-color: #fee2e2;
+            /* Light Red tint */
+            color: white;
+        }
+
+        .school-holiday {
+            background-image: repeating-linear-gradient(45deg,
+                    transparent,
+                    transparent 5px,
+                    rgba(0, 0, 0, 0.2) 5px,
+                    rgba(0, 0, 0, 0.2) 10px);
+        }
+
+        .day-cell.status-service {
+            background-color: var(--status-service);
+            color: white;
+        }
+
+
+        /* 2. Navigation Bar */
+        .month-nav {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .month-nav button {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+        }
+
+        .month-nav button {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+        }
+
+        /* Custom Tooltip */
+        #custom-tooltip {
+            position: fixed;
+            background: #333;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+            max-width: 200px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: var(--shadow-md);
+        }
+
+        .modal h2 {
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        textarea.bulk-input {
+            width: 100%;
+            height: 150px;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-family: monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+        }
+
+        .status-vacation {
+            background-color: var(--status-vacation);
+            color: white;
+        }
+
+        .status-absent {
+            background-color: var(--status-absent);
+            color: white;
+        }
+
+        /* Warning Footer */
+        .validation-row {
+            background: #fff1f2;
+            color: var(--danger-color);
+            font-weight: bold;
+            justify-content: flex-start;
+            padding-left: 10px;
+            border-top: 2px solid var(--danger-color);
+        }
+
+        .validation-cell {
+            border-top: 2px solid var(--danger-color);
+        }
+
+        .warning-text {
+            color: var(--danger-color);
+            font-size: 0.7rem;
+            font-weight: bold;
+            line-height: 1.1;
+            display: block;
+            text-align: center;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        header {
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calendar-toolbar {
+            background: var(--surface-color);
+            padding: 15px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            /* Stack items */
+            align-items: flex-start;
+            /* Align left */
+            gap: 15px;
+        }
+
+        /* Bulk Import Panel inside Header */
+        .bulk-import-panel {
+            background: #f8fafc;
+            /* Match bg inside header */
+            padding: 15px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        /* ... existing styles ... */
+
+        /* Summary Section */
+        .summary-section {
+            margin-top: 20px;
+            background: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .summary-section h2 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        #exportSummary {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 0.85rem;
+            resize: vertical;
+            background: #f8fafc;
+            color: var(--text-main);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-top">
+            <h1>Interventionsdienst Planer 2026</h1>
+            <div class="controls">
+                <button id="btnReset" onclick="app.resetData()">Reset</button>
+                <button id="btnExport" style="display:none" onclick="app.exportData()">Export JSON</button>
+                <button id="btnImport" class="primary" style="display:none"
+                    onclick="document.getElementById('fileInput').click()">Import
+                    JSON</button>
+                <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
+            </div>
+        </div>
+    </header>
+
+    <div class="calendar-toolbar">
+        <div class="mode-selector"
+            style="margin-right: 30px; display: flex; gap: 10px; background: #f5f5f5; padding: 5px; border-radius: 8px;">
+            <label
+                style="cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                <input type="radio" name="mode" value="I" checked onchange="app.setMode('I')">
+                <span style="font-weight: bold; color: var(--status-service);">Dienst (I)</span>
+            </label>
+            <label
+                style="cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                <input type="radio" name="mode" value="A" onchange="app.setMode('A')">
+                <span style="font-weight: bold; color: var(--danger-color);">Abwesend (A)</span>
+            </label>
+        </div>
+
+        <div class="legend" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <div class="legend-item">
+                <div class="color-box" style="background:var(--status-service)"></div> Interventionsdienst
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: var(--danger-color); border: 1px solid var(--danger-color);">
+                </div> Abwesend
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background:#fee2e2"></div> Feiertag
+            </div>
+            <div class="legend-item">
+                <div class="color-box"
+                    style="background-image: repeating-linear-gradient(45deg, #ccc, #ccc 2px, transparent 2px, transparent 6px); border: 1px solid #ddd;">
+                </div> Schulferien
+            </div>
+            <div class="legend-item"><span style="font-size: 1.2rem; color: var(--danger-color)">⚠</span>
+                Unterbesetzung</div>
+        </div>
+    </div>
+
+    <div class="month-nav" id="monthNav">
+        <!-- Generated by JS -->
+    </div>
+
+    <div id="calendar" class="calendar-container"></div>
+
+    <div class="summary-section">
+        <h2>Zusammenfassung (Dienste)</h2>
+        <textarea id="exportSummary" readonly placeholder="Automatische Zusammenfassung..."></textarea>
+        <h2 style="margin-top: 20px;">Eingabestatus</h2>
+        <textarea id="statusSummary" readonly placeholder="Noch niemand fertig..."
+            style="height: 100px; color: var(--success-color); font-weight: bold;"></textarea>
+
+        <h2 style="margin-top: 20px;">Massenimport Abwesenheiten</h2>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 5px;">
+            Zeiträume eingeben (z.B. "01.01.-05.01., 10.02.-12.02."), um diese als <strong>Abwesend</strong> zu
+            markieren.<br>
+            Gilt nur für den aktuell angemeldeten Benutzer.
+        </p>
+        <textarea id="bulkImportInput" placeholder="01.01.-05.01., ..."></textarea>
+        <button onclick="app.processBulkImport()" style="margin-top: 10px;">Importieren</button>
+    </div>
+
+    <div id="custom-tooltip"></div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal-overlay" style="display:flex;">
+        <div class="modal">
+            <h2>Willkommen!</h2>
+            <p style="margin-bottom:15px; color:#666;">Bitte wähle deinen Namen, um dich anzumelden.</p>
+            <div class="form-group">
+                <label>Ich bin:</label>
+                <select id="loginSelect"></select>
+            </div>
+            <div id="loginPwdGroup" class="form-group" style="margin-top:10px;">
+                <label style="font-size:0.8rem; color:#888;">Passwort / PIN:</label>
+                <input type="password" id="loginPwdInput" placeholder="PIN eingeben...">
+            </div>
+            <div class="form-group" style="margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
+                <label style="font-size:0.8rem; color:#888;">API Key (nur einmalig nötig):</label>
+                <input type="password" id="apiKeyInput" placeholder="Master Key (optional wenn gespeichert)">
+            </div>
+            <div class="modal-actions">
+                <button class="primary" onclick="app.processLogin()">Anmelden</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+
+
+    <script>
+        const CONFIG = {
+            year: 2026,
+            // binId: '694548d1d0ea881f403427e3', // Central Database (Disabled for Local Mode)
+            apiKey: localStorage.getItem('jsonbin_key') || '', // Stored locally
+            employees: [
+                { id: 'debl', name: 'Debl', role: '', skills: ['privat', 'teer'], pin: '0303' },
+                { id: 'grewe', name: 'Grewe', role: '', skills: [], pin: '0808' },
+                { id: 'meindl', name: 'Meindl', role: '', skills: ['teer'], pin: '0505' },
+                { id: 'neef', name: 'Neef', role: '', skills: ['tavi'], pin: '0404' },
+                { id: 'sag', name: 'Sag', role: '', skills: ['teer'], pin: '0606' },
+                { id: 'schach', name: 'Schach', role: '', skills: [], pin: '0909' },
+                { id: 'stadler', name: 'Stadler', role: '', skills: ['tavi'], pin: '0707' },
+                { id: 'wagner', name: 'Wagner', role: '', skills: ['tavi', 'privat'], pin: '0202' }
+            ],
+            // ... (rest of config)
+            holidays: {
+                '2026-01-01': 'Neujahr',
+                '2026-01-06': 'Hl. 3 Könige',
+                '2026-04-03': 'Karfreitag',
+                '2026-04-06': 'Ostermontag',
+                '2026-05-01': 'Tag der Arbeit',
+                '2026-05-14': 'Christi Himmelfahrt',
+                '2026-05-25': 'Pfingstmontag',
+                '2026-06-04': 'Fronleichnam',
+                '2026-08-15': 'Mariä Himmelfahrt',
+                '2026-10-03': 'Tag d. dt. Einheit',
+                '2026-11-01': 'Allerheiligen',
+                '2026-12-25': '1. Weihnachtstag',
+                '2026-12-26': '2. Weihnachtstag'
+            },
+            schoolHolidays: [
+                { start: '2026-01-01', end: '2026-01-05', name: 'Weihnachtsferien' },
+                { start: '2026-02-16', end: '2026-02-20', name: 'Winterferien' },
+                { start: '2026-03-30', end: '2026-04-10', name: 'Osterferien' },
+                { start: '2026-05-26', end: '2026-06-05', name: 'Pfingstferien' },
+                { start: '2026-08-03', end: '2026-09-14', name: 'Sommerferien' },
+                { start: '2026-11-02', end: '2026-11-06', name: 'Herbstferien' },
+                { start: '2026-12-24', end: '2026-12-31', name: 'Weihnachtsferien' }
+            ]
+        };
+
+        /* Data Service for JSONbin */
+        class DataService {
+            static async load() {
+                if (!CONFIG.binId) return JSON.parse(localStorage.getItem('interventionsdienst_2026')) || {};
+                if (!CONFIG.apiKey) return JSON.parse(localStorage.getItem('interventionsdienst_2026')) || {};
+                try {
+                    const res = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}/latest`, {
+                        headers: { 'X-Master-Key': CONFIG.apiKey }
+                    });
+                    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+                    const json = await res.json();
+                    return json.record;
+                } catch (e) {
+                    console.error(e);
+                    alert(`Fehler beim Laden (JSONBin): ${e.message}\nLade lokale Kopie.`);
+                    return JSON.parse(localStorage.getItem('interventionsdienst_2026')) || {};
+                }
+            }
+
+            static async save(state) {
+                // Always save local
+                localStorage.setItem('interventionsdienst_2026', JSON.stringify(state));
+
+                if (!CONFIG.binId || !CONFIG.apiKey) return;
+
+                try {
+                    // Update Bin
+                    await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.binId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': CONFIG.apiKey
+                        },
+                        body: JSON.stringify(state)
+                    });
+                } catch (e) {
+                    console.error('Sync error', e);
+                }
+            }
+        }
+
+        class App {
+            constructor() {
+                this.currentUser = null;
+                this.state = {}; // Will be loaded
+                this.dates = this.generateDates();
+
+                // Drag State
+                this.isDragging = false;
+                this.dragState = null; // true = adding, false = removing
+                this.dragEmpId = null;
+
+                // Bind Helper
+                this.handleGlobalMouseUp = this.handleGlobalMouseUp.bind(this);
+                document.addEventListener('mouseup', this.handleGlobalMouseUp);
+
+                this.currentMode = 'I'; // Default to Intervention
+                this.currentText = '';
+                this.currentMonthIndex = 0;
+
+                this.initUI();
+
+                // Start with Login
+                this.showLoginModal();
+                // this.bypassLogin();
+
+                // Keyboard Navigation
+                // Keyboard Navigation
+                document.addEventListener('keydown', (e) => {
+                    const activeEl = document.activeElement;
+                    const activeTag = activeEl ? activeEl.tagName : '';
+                    if (activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+                    if (activeTag === 'INPUT' && !['radio', 'checkbox', 'button', 'submit', 'reset'].includes(activeEl.type)) return;
+
+                    // Ensure we have a valid index from the scroll listener or default to 0
+                    const currentIndex = this.currentMonthIndex || 0;
+
+                    if (e.key === 'ArrowRight') {
+                        e.preventDefault(); // Stop native scroll
+                        this.scrollToMonth(currentIndex + 1);
+                    } else if (e.key === 'ArrowLeft') {
+                        e.preventDefault(); // Stop native scroll
+                        this.scrollToMonth(currentIndex - 1);
+                    }
+                });
+
+
+            }
+
+            generateDates() {
+                const dates = [];
+                const date = new Date(CONFIG.year, 0, 1);
+                while (date.getFullYear() === CONFIG.year) {
+                    const dateStr = this.formatDate(date);
+                    const dayOfWeek = date.getDay(); // 0 = Sun, 6 = Sat
+
+                    // Find school holiday name
+                    let shName = null;
+                    const sh = CONFIG.schoolHolidays.find(h => dateStr >= h.start && dateStr <= h.end);
+                    if (sh) shName = sh.name;
+
+                    dates.push({
+                        dateStr,
+                        day: date.getDate(),
+                        month: date.getMonth(), // 0-11
+                        weekday: dayOfWeek,
+                        isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+                        holiday: CONFIG.holidays[dateStr],
+                        schoolHoliday: shName,
+                        isSchoolHoliday: !!shName
+                    });
+                    date.setDate(date.getDate() + 1);
+                }
+                return dates;
+            }
+
+            bypassLogin() {
+                console.log('Login bypassed (Testing Mode)');
+                this.currentUser = 'admin';
+                document.getElementById('loginModal').style.display = 'none';
+
+                // UI for Admin
+                document.getElementById('btnReset').style.display = 'inline-block';
+                document.getElementById('btnImport').style.display = 'inline-block';
+
+                // Load Data
+                DataService.load().then(data => {
+                    this.state = data;
+                    this.render();
+                });
+            }
+
+            initUI() {
+                // Populate Month Nav
+                const nav = document.getElementById('monthNav');
+                const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+                months.forEach((m, i) => {
+                    const btn = document.createElement('button');
+                    btn.innerText = m;
+                    btn.onclick = () => this.scrollToMonth(i);
+                    nav.appendChild(btn);
+                });
+            }
+
+            showLoginModal() {
+                const select = document.getElementById('loginSelect');
+                select.innerHTML = '';
+
+                // Admin Option
+                const adminOpt = document.createElement('option');
+                adminOpt.value = 'admin';
+                adminOpt.innerText = 'Administrator (Alles bearbeiten)';
+                adminOpt.style.fontWeight = 'bold';
+                select.appendChild(adminOpt);
+
+                CONFIG.employees.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.id;
+                    opt.innerText = emp.name;
+                    select.appendChild(opt);
+                });
+
+                // Clear Password Field
+                document.getElementById('loginPwdInput').value = '';
+
+                // Pre-fill Key if known
+                if (CONFIG.apiKey) {
+                    document.getElementById('apiKeyInput').value = CONFIG.apiKey;
+                }
+            }
+
+            async processLogin() {
+                const empId = document.getElementById('loginSelect').value;
+                const pwdInput = document.getElementById('loginPwdInput').value;
+                const keyInput = document.getElementById('apiKeyInput').value.trim();
+
+                // Validate Password/PIN
+                if (empId === 'admin') {
+                    if (pwdInput !== 'CaMK2delta') {
+                        alert('Falsches Admin-Passwort!');
+                        return;
+                    }
+                } else {
+                    const emp = CONFIG.employees.find(e => e.id === empId);
+                    if (emp && emp.pin && pwdInput !== emp.pin) {
+                        alert('Falsche PIN!');
+                        return;
+                    }
+                }
+
+                if (CONFIG.binId && !keyInput) {
+                    alert('Bitte Master Key eingeben');
+                    return;
+                }
+
+                // Save Key locally
+                localStorage.setItem('jsonbin_key', keyInput);
+                CONFIG.apiKey = keyInput;
+
+                this.currentUser = empId;
+                document.getElementById('loginModal').style.display = 'none';
+
+                // UI RESTRICTION for non-admins
+                // UI RESTRICTION for non-admins - Removed as elements are gone.
+
+                // UI RESTRICTION for Reset/Import/Export
+                const displayStyle = (this.currentUser === 'admin') ? 'inline-block' : 'none';
+                document.getElementById('btnReset').style.display = displayStyle;
+                document.getElementById('btnExport').style.display = displayStyle;
+                document.getElementById('btnImport').style.display = displayStyle;
+
+                // Finish Button removed from header, now in calendar
+
+                // Hide or adjust UI controls for strict Intervention mode
+                // document.getElementById('modalEmp').innerHTML = ''; // Not used
+                // document.getElementById('importEmp').innerHTML = ''; // Not used
+
+                // Show Finish Button for Employees (Non-Admin)
+                // const finishStyle = (this.currentUser !== 'admin') ? 'inline-block' : 'none';
+                // document.getElementById('btnFinish').style.display = finishStyle;
+
+                // Load Data from Server
+                document.body.style.cursor = 'wait';
+                try {
+                    const remoteData = await DataService.load();
+                    this.state = remoteData || {};
+                    this.render();
+                    this.render();
+                    this.updateMonthButtons(); // Update button after login
+                } finally {
+                    document.body.style.cursor = 'default';
+                }
+            }
+
+            openModal() {
+                // Sync with current mode
+                document.getElementById('modalType').value = this.currentMode;
+                document.getElementById('modalTextGroup').style.display = 'block';
+                document.getElementById('modalText').value = ''; // Reset text
+                document.getElementById('addModal').style.display = 'flex';
+            }
+
+            scrollToMonth(index) {
+                if (index < 0 || index > 11) return;
+                this.currentMonthIndex = index;
+
+                const container = document.getElementById('calendar'); // Updated scroll target
+                const el = document.getElementById(`month-header-${index}`);
+
+                if (el && container) {
+                    container.scrollTo({
+                        left: el.offsetLeft - 250,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            setMode(mode) {
+                this.currentMode = mode;
+                // document.getElementById('customText').style.display = mode === 'T' ? 'inline-block' : 'none';
+            }
+
+            setCustomText(txt) {
+                this.currentText = txt;
+            }
+
+            handleMouseDown(empId, dateStr) {
+                // ACCESS CONTROL
+                if (this.currentUser !== 'admin' && this.currentUser !== empId) {
+                    // alert(`Du bist als "${this.getEmpName(this.currentUser)}" angemeldet und darfst nur deine eigenen Einträge bearbeiten.`);
+                    // Relaxed for interventions? Or strict? 
+                    // User said: "Gruppe von Ärzten". Assuming they strictly edit their own or admin.
+                    // Keep strict.
+                    return; // Silently fail or alert
+                }
+                this.toggleService(empId, dateStr);
+            }
+
+            toggleService(empId, dateStr) {
+                // Wrapper for single click
+                const currentState = !!(this.state[empId] && this.state[empId][dateStr]);
+                this.setService(empId, dateStr, !currentState);
+            }
+
+            setService(empId, dateStr, isActive, skipSave = false) {
+                if (!this.state[empId]) this.state[empId] = {};
+
+                if (isActive) {
+                    // Use current Mode (I or A)
+                    this.state[empId][dateStr] = { type: this.currentMode, text: '' };
+                } else {
+                    if (this.state[empId][dateStr]) delete this.state[empId][dateStr];
+                }
+
+                // Update UI immediately (optimistic)
+                const cell = document.getElementById(`cell-${empId}-${dateStr}`);
+                if (cell) {
+                    cell.classList.remove('status-service', 'status-absent', 'has-text');
+                    if (this.state[empId][dateStr]) {
+                        const st = this.state[empId][dateStr];
+                        if (st.type === 'A') {
+                            cell.classList.add('status-absent');
+                        } else {
+                            cell.classList.add('status-service');
+                        }
+                        if (st.text) {
+                            cell.classList.add('has-text');
+                            // Ensure text is set (though usually handled by render, we might need it here if toggling logic didn't set it? 
+                            // Wait, setService usually sets empty text on creation.
+                            // If text existed before, it might stay.
+                            // But setService is "isActive" -> type: mode, text: ''.
+                            // So simple toggle clears text anyway if rewritten.
+                            // But if we're just updating UI:
+                            // If we are deleting (isActive=false), we fall to ELSE block below?
+                            // No, this block is if(state exists).
+                        }
+                    } else {
+                        // State deleted
+                        cell.innerHTML = ''; // CLEAR TEXT
+                    }
+                }
+
+                this.updateValidationUI(dateStr);
+
+                if (!skipSave) {
+                    this.saveState();
+                    this.updateSummary();
+                    this.updateStats(this.currentMonthIndex || 0);
+                }
+            }
+
+            handleMouseDown(empId, dateStr) {
+                // ACCESS CONTROL
+                if (this.currentUser !== 'admin' && this.currentUser !== empId) return;
+
+                // Stadler Check
+                if (empId === 'stadler' && dateStr >= '2026-07-01') return;
+
+                this.isDragging = true;
+                this.dragEmpId = empId;
+
+                // Determine initial action based on clicked cell state
+                // If it HAS a service, we start REMOVING. If EMPTY, we start ADDING.
+                const hasService = !!(this.state[empId] && this.state[empId][dateStr]);
+                this.dragState = !hasService;
+
+                // Apply to initial cell
+                this.setService(empId, dateStr, this.dragState, true); // skipSave true for performance
+            }
+
+            handleMouseOver(empId, dateStr) {
+                if (!this.isDragging) return;
+                if (this.dragEmpId !== empId) return; // Only same row/employee
+
+                // Stadler Check
+                if (empId === 'stadler' && dateStr >= '2026-07-01') return;
+
+                this.setService(empId, dateStr, this.dragState, true);
+            }
+
+            handleGlobalMouseUp() {
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.dragState = null;
+                    this.dragEmpId = null;
+
+                    // Final Save & Update
+                    this.saveState();
+                    this.updateSummary();
+                    this.updateStats(this.currentMonthIndex || 0);
+                }
+            }
+
+
+
+            // setVacation removed
+            // addRange removed
+            processBulkImport() {
+                const input = document.getElementById('bulkImportInput').value;
+                if (!input.trim()) return;
+
+                // Advanced Parsing: Name: Ranges...
+                // Lines
+                const lines = input.split('\n').map(l => l.trim()).filter(l => l);
+                let count = 0;
+                let errors = [];
+
+                lines.forEach(line => {
+                    // split Name: Rest
+                    const match = line.match(/^([^:]+):(.*)$/);
+                    if (!match) return; // Skip format mismatch
+
+                    const name = match[1].trim();
+                    const rangePart = match[2];
+
+                    // Find Employee
+                    const emp = CONFIG.employees.find(e => e.name.toLowerCase() === name.toLowerCase());
+
+                    if (!emp) {
+                        errors.push(`Mitarbeiter nicht gefunden: "${name}"`);
+                        return;
+                    }
+
+                    // Security Check: Only allow if admin or same user
+                    if (this.currentUser !== 'admin' && this.currentUser !== emp.id) {
+                        errors.push(`Keine Berechtigung für Mitarbeiter: "${name}"`);
+                        return;
+                    }
+
+                    // Parse Ranges: 15.01. - 16.01. (Note), 22.01.
+                    const regex = /(\d{2}\.\d{2}\.)(?:\s*-\s*(\d{2}\.\d{2}\.))?\s*(?:\(([^)]+)\))?/g;
+
+                    let m;
+                    while ((m = regex.exec(rangePart)) !== null) {
+                        const d1Str = m[1];
+                        const d2Str = m[2]; // undefined if single day
+                        const note = m[3] ? m[3].trim() : '';
+
+                        const d1 = this.parseSimpleDate(d1Str);
+                        const d2 = d2Str ? this.parseSimpleDate(d2Str) : d1;
+
+                        if (d1 && d2 && d1 <= d2) {
+                            let curr = new Date(d1);
+
+                            const realMode = this.currentMode;
+                            this.currentMode = 'A';
+
+                            while (curr <= d2) {
+                                const ds = this.formatDate(curr);
+                                const dateExist = this.dates.find(d => d.dateStr === ds);
+                                if (dateExist) {
+                                    this.setService(emp.id, ds, true, true);
+                                    if (this.state[emp.id][ds]) {
+                                        // Check if we need to set text
+                                        if (note) {
+                                            this.state[emp.id][ds].text = note;
+                                            const cell = document.getElementById(`cell-${emp.id}-${ds}`);
+                                            if (cell) {
+                                                cell.classList.add('has-text');
+                                                cell.innerHTML = `<span class="cell-text">${note}</span>`;
+                                            }
+                                        }
+                                    }
+                                }
+                                curr.setDate(curr.getDate() + 1);
+                            }
+                            this.currentMode = realMode;
+                            count++;
+                        }
+                    }
+                });
+
+                this.saveState();
+                this.updateSummary();
+                this.updateStats(this.currentMonthIndex || 0);
+
+                let msg = `${count} Zeiträume verarbeitet.`;
+                if (errors.length > 0) {
+                    msg += `\n\nFehler:\n` + errors.join('\n');
+                }
+                alert(msg);
+                document.getElementById('bulkImportInput').value = '';
+            }
+
+            showTooltip(e, empId, dateStr) {
+                const status = this.state[empId]?.[dateStr];
+                if (status && status.text) {
+                    const tooltip = document.getElementById('custom-tooltip');
+                    tooltip.innerText = status.text;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = (e.pageX + 10) + 'px';
+                    tooltip.style.top = (e.pageY + 10) + 'px';
+                }
+            }
+
+            hideTooltip() {
+                const tooltip = document.getElementById('custom-tooltip');
+                tooltip.style.display = 'none';
+            }
+
+            parseSimpleDate(str) {
+                // "01.01." or "1.1."
+                const parts = str.split('.');
+                if (parts.length < 2) return null;
+                const d = parseInt(parts[0]);
+                const m = parseInt(parts[1]);
+                if (isNaN(d) || isNaN(m)) return null;
+                return new Date(CONFIG.year, m - 1, d);
+            }
+
+            parseDate(d, m, y) {
+                let year = y ? parseInt(y) : CONFIG.year;
+                if (isNaN(year)) year = CONFIG.year;
+
+                if (year < 100) year += 2000; // Assume 20xx
+                // JS Month is 0-indexed
+                return new Date(year, parseInt(m) - 1, parseInt(d));
+            }
+
+            formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            updateValidationUI(dateStr) {
+                const issues = this.validateCoverage(this.dates.find(d => d.dateStr === dateStr));
+                const valCell = document.getElementById(`val-${dateStr}`);
+
+                if (valCell) {
+                    if (issues) {
+                        valCell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
+                        valCell.title = 'Fehlend: ' + issues.join(', ');
+                        valCell.style.background = '#fee2e2';
+                    } else {
+                        const dateObj = this.dates.find(d => d.dateStr === dateStr);
+                        valCell.innerHTML = '';
+                        valCell.title = '';
+                        valCell.style.background = (dateObj.isWeekend || dateObj.holiday) ? 'var(--status-weekend)' : '';
+                    }
+                }
+            }
+
+            saveState() {
+                DataService.save(this.state);
+            }
+
+            // loadState removed - served by DataService
+
+            validateCoverage(dateObj) {
+                const dateStr = dateObj.dateStr;
+                // if (dateObj.isWeekend || dateObj.holiday) return null; // Logic check: is service needed on weekends? Assuming YES for Interventionsdienst unless told otherwise. But usually Urlaubsplaner ignored weekends.
+                // User said: "Für jeden Tag darf nur genau eine Person diesen Dienst wahrnehmen." -> "Every day".
+                // Let's assume Weekends are INCLUDED in "Jeden Tag", unlike normal work.
+                // Wait, typically Interventionsdienst might be 24/7.
+                // However, let's look at the "Urlaubsplaner" base. It marks weekends.
+                // Safest bet: Validate ALL days, but maybe warn differently?
+                // Or just standard "Jeden Tag" = All days including weekends.
+
+                const assignedEmployees = CONFIG.employees.filter(emp => {
+                    const status = this.state[emp.id]?.[dateStr];
+                    return status && status.type === 'I';
+                });
+
+                const count = assignedEmployees.length;
+                const hasGrewe = assignedEmployees.some(e => e.id === 'grewe');
+
+                if (count === 0) return ['Kein Dienst'];
+
+                if (count === 1) {
+                    if (hasGrewe) return ['Backup für Grewe fehlt'];
+                    return null;
+                }
+
+                if (count === 2) {
+                    if (hasGrewe) return null; // OK
+                    return [`Mehrere Dienste (${count})`];
+                }
+
+                return [`Zu viele Dienste (${count})`]; // > 2 always error
+            }
+
+            resetData() {
+                if (confirm('Wirklich alles löschen?')) {
+                    this.state = {};
+                    this.saveState();
+                    this.render();
+                }
+            }
+
+            exportData() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.state));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "interventionsdienst_2026.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            }
+
+            importData(input) {
+                const file = input.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        this.state = JSON.parse(e.target.result);
+                        this.saveState();
+                        this.render();
+                    } catch (err) {
+                        alert('Fehler beim Laden der Datei');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            render() {
+                const container = document.getElementById('calendar');
+                container.innerHTML = '';
+
+                // 1. Month Headers
+                let currentMonth = -1;
+                let colStart = 2; // 1 is name col
+
+                this.dates.forEach((d, index) => {
+                    if (d.month !== currentMonth) {
+                        const monthName = new Date(CONFIG.year, d.month, 1).toLocaleString('de-DE', { month: 'long' });
+                        const monthEl = document.createElement('div');
+                        monthEl.className = 'cell header-cell sticky-header month-header';
+                        monthEl.id = `month-header-${d.month}`;
+                        monthEl.id = `month-header-${d.month}`;
+                        // monthEl.innerText = monthName; // Removed to allow child elements
+                        monthEl.style.gridColumnStart = colStart + index;
+
+                        // Wrapper for Flex layout (Name + Button)
+                        monthEl.style.display = 'flex';
+                        monthEl.style.alignItems = 'center';
+                        monthEl.style.justifyContent = 'center';
+
+                        const titleSpan = document.createElement('span');
+                        titleSpan.innerText = monthName;
+                        monthEl.appendChild(titleSpan);
+
+                        // Add Month Finish Button
+                        const btn = document.createElement('button');
+                        const mIndex = d.month;
+                        btn.id = `btn-finish-${mIndex}`;
+                        btn.style.marginLeft = '10px';
+                        btn.style.fontSize = '0.7rem';
+                        btn.style.padding = '2px 8px';
+                        btn.style.borderRadius = '4px';
+                        btn.style.border = 'none';
+                        btn.style.color = 'white';
+                        btn.style.display = 'none'; // Hidden by default
+                        btn.style.zIndex = '100'; // Ensure clickable
+                        btn.onclick = (e) => {
+                            e.stopPropagation();
+                            this.markMonthFinished(mIndex);
+                        };
+                        monthEl.appendChild(btn);
+
+                        let span = 1;
+                        let i = index + 1;
+                        while (i < this.dates.length && this.dates[i].month === d.month) {
+                            span++;
+                            i++;
+                        }
+                        monthEl.style.gridColumnEnd = `span ${span}`;
+                        container.appendChild(monthEl);
+
+                        currentMonth = d.month;
+                    }
+                });
+
+                // 2. School Holiday Row
+                // New logic: Iterate school holidays and place them
+                CONFIG.schoolHolidays.forEach(sh => {
+                    // Find start and end index
+                    const startIdx = this.dates.findIndex(d => d.dateStr >= sh.start && d.dateStr <= sh.end);
+
+                    // Simple check if holiday is within range (might be partial if year cut)
+                    if (startIdx !== -1) {
+                        let endIdx = this.dates.findIndex(d => d.dateStr > sh.end);
+                        if (endIdx === -1) endIdx = this.dates.length;
+
+                        const span = endIdx - startIdx;
+                        if (span > 0) {
+                            const shEl = document.createElement('div');
+                            shEl.className = 'cell header-cell sticky-header school-holiday-row';
+                            shEl.style.gridRow = 2;
+                            shEl.style.gridColumnStart = startIdx + 2;
+                            shEl.style.gridColumnEnd = `span ${span}`;
+                            shEl.innerText = sh.name;
+                            shEl.title = sh.name;
+                            shEl.style.backgroundColor = '#cbd5e1'; // Darker background
+                            shEl.style.fontSize = '0.7rem';
+                            shEl.style.overflow = 'hidden';
+                            shEl.style.textOverflow = 'ellipsis';
+                            shEl.style.whiteSpace = 'nowrap';
+                            shEl.style.textAlign = 'center';
+                            shEl.style.lineHeight = '20px'; // Adjust height
+                            // shEl.style.borderLeft = '1px solid #ccc';
+                            shEl.innerText = sh.name;
+                            shEl.title = sh.name; // Keep title for tooltip
+
+                            container.appendChild(shEl);
+                        }
+                    }
+                });
+
+                // 3. Day Headers (Shifted to Row 3)
+                const corner = document.createElement('div');
+                corner.className = 'cell header-cell sticky-col sticky-corner sticky-header';
+                corner.style.gridRow = '1 / span 3'; // Spans Month, School Hol, Day
+                corner.innerText = 'Mitarbeiter';
+                container.appendChild(corner);
+
+                this.dates.forEach((d, i) => {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
+
+                    let text = '';
+                    if (d.holiday) text = d.holiday;
+                    // Removed school holiday text from day header as it's now above
+
+                    dayEl.innerHTML = `<span>${d.day}</span>${text ? `<span class="header-holiday-text">${text}</span>` : ''}`;
+                    dayEl.style.gridRow = 3; // Shifted
+                    dayEl.style.gridColumn = i + 2;
+                    dayEl.title = text || '';
+                    container.appendChild(dayEl);
+                });
+
+                // 4. Employee Rows (Shifted starting Row 4)
+                CONFIG.employees.forEach((emp, empIndex) => {
+                    // Name Cell
+                    const nameEl = document.createElement('div');
+                    nameEl.className = 'cell employee-row-header sticky-col';
+                    nameEl.style.gridRow = empIndex + 4; // Shifted
+                    nameEl.id = `emp-name-${emp.id}`; // Add ID for stats updates
+                    nameEl.innerHTML = `${emp.name}`;
+                    container.appendChild(nameEl);
+
+                    // Day Cells
+                    this.dates.forEach((d, dateIndex) => {
+                        const cell = document.createElement('div');
+                        let classes = ['cell', 'day-cell'];
+                        if (d.isWeekend) classes.push('weekend');
+                        if (d.isSchoolHoliday) classes.push('school-holiday');
+                        if (d.holiday) classes.push('holiday');
+
+                        const status = this.state[emp.id]?.[d.dateStr];
+                        if (status) {
+                            if (status.type === 'I') classes.push('status-service');
+                            if (status.type === 'A') classes.push('status-absent');
+                            if (status.text) classes.push('has-text');
+                        }
+
+                        // Stadler Exit Logic
+                        if (emp.id === 'stadler' && d.dateStr >= '2026-07-01') {
+                            classes.push('disabled-cell');
+                        }
+
+                        cell.className = classes.join(' ');
+                        cell.style.gridRow = empIndex + 4; // Shifted
+                        cell.style.gridColumn = dateIndex + 2;
+                        cell.id = `cell-${emp.id}-${d.dateStr}`;
+
+                        if (status && status.text) {
+                            cell.innerHTML = `<span class="cell-text">${status.text}</span>`;
+                            // cell.title = status.text; // Removed for custom tooltip
+                        }
+
+                        // Interaction Events
+                        cell.onmousedown = (e) => {
+                            e.preventDefault();
+                            this.handleMouseDown(emp.id, d.dateStr);
+                        };
+                        cell.onmouseover = () => this.handleMouseOver(emp.id, d.dateStr);
+
+                        // Custom Tooltip Events
+                        cell.onmouseenter = (e) => this.showTooltip(e, emp.id, d.dateStr);
+                        cell.onmousemove = (e) => this.showTooltip(e, emp.id, d.dateStr); // Follow mouse
+                        cell.onmouseleave = () => this.hideTooltip();
+
+                        container.appendChild(cell);
+                    });
+                });
+
+                // 5. Validation Row (Shifted)
+                const valHeader = document.createElement('div');
+                valHeader.className = 'cell sticky-col validation-row';
+                valHeader.style.gridRow = CONFIG.employees.length + 4; // Shifted
+                valHeader.innerHTML = '⚠ Fehlende Abdeckung';
+                container.appendChild(valHeader);
+
+                this.dates.forEach((d, dateIndex) => {
+                    const issues = this.validateCoverage(d);
+                    const cell = document.createElement('div');
+                    cell.className = 'cell validation-cell';
+                    cell.id = `val-${d.dateStr}`;
+
+                    if (d.isWeekend || d.holiday) cell.style.background = 'var(--status-weekend)';
+
+                    cell.style.gridRow = CONFIG.employees.length + 4; // Shifted
+                    cell.style.gridColumn = dateIndex + 2;
+
+                    if (issues) {
+                        cell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
+                        cell.title = 'Fehlend: ' + issues.join(', ');
+                        cell.style.background = '#fee2e2';
+                    }
+
+                    container.appendChild(cell);
+                });
+
+                this.updateSummary();
+
+                // Determine current month and update stats
+                this.updateStats(this.currentMonthIndex || 0);
+
+                // Scroll Listener for Stats
+                container.onscroll = () => {
+                    let limit = container.scrollLeft + 250;
+                    let idx = 0;
+                    for (let i = 0; i < 12; i++) {
+                        const el = document.getElementById(`month-header-${i}`);
+                        if (el && el.offsetLeft <= limit) {
+                            idx = i;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (idx !== this.currentMonthIndex) {
+                        this.currentMonthIndex = idx;
+                        this.updateStats(idx);
+                        this.updateStats(idx);
+                        // this.updateFinishButtonState(); // Removed, handled globally/per-month
+                    }
+                };
+            }
+
+            updateStats(monthIndex) {
+                // Find all dates in this month
+                const monthDates = this.dates.filter(d => d.month === monthIndex);
+
+                CONFIG.employees.forEach(emp => {
+                    let mTotal = 0;
+                    let mWeekend = 0;
+                    let yTotal = 0;
+                    let yWeekend = 0;
+
+                    // Yearly Stats
+                    this.dates.forEach(d => {
+                        const status = this.state[emp.id]?.[d.dateStr];
+                        if (status && status.type === 'I') {
+                            yTotal++;
+                            if (d.isWeekend || d.holiday) {
+                                yWeekend++;
+                            }
+                        }
+                    });
+
+                    // Monthly Stats
+                    monthDates.forEach(d => {
+                        const status = this.state[emp.id]?.[d.dateStr];
+                        if (status && status.type === 'I') {
+                            mTotal++;
+                            if (d.isWeekend || d.holiday) {
+                                mWeekend++;
+                            }
+                        }
+                    });
+
+                    // Update UI
+                    const nameEl = document.getElementById(`emp-name-${emp.id}`);
+                    if (nameEl) {
+                        nameEl.innerHTML = `
+                            ${emp.name} 
+                            <span style="font-size:0.7rem; color:#666; font-weight:normal; display:block; margin-top:2px; margin-left:8px;">
+                                M: ${mTotal} (${mWeekend} WE) | J: ${yTotal} (${yWeekend} WE)
+                            </span>`;
+                    }
+                });
+            }
+
+            markMonthFinished(monthIndex) {
+                if (!this.currentUser || this.currentUser === 'admin') return;
+
+                const idx = (typeof monthIndex === 'number') ? monthIndex : (this.currentMonthIndex || 0);
+                const monthStr = new Date(2026, idx, 1).toLocaleString('de-DE', { month: 'short' });
+                const key = `2026-${String(idx + 1).padStart(2, '0')}`;
+
+                if (!this.state.__STATUS__) this.state.__STATUS__ = {};
+                if (!this.state.__STATUS__[this.currentUser]) this.state.__STATUS__[this.currentUser] = {};
+
+                // Toggle Logic
+                if (this.state.__STATUS__[this.currentUser][key]) {
+                    if (confirm(`Status für ${monthStr} zurücksetzen und Bearbeitung wieder erlauben?`)) {
+                        delete this.state.__STATUS__[this.currentUser][key];
+                        this.saveState();
+                        this.updateMonthButtons();
+                        this.updateStatusSummary();
+                    }
+                } else {
+                    this.state.__STATUS__[this.currentUser][key] = true;
+                    this.saveState();
+                    this.updateMonthButtons();
+                    this.updateStatusSummary();
+                }
+            }
+
+            updateMonthButtons() {
+                // Iterate all 12 months
+                for (let i = 0; i < 12; i++) {
+                    const btn = document.getElementById(`btn-finish-${i}`);
+                    if (!btn) continue;
+
+                    if (!this.currentUser || this.currentUser === 'admin') {
+                        btn.style.display = 'none';
+                        continue;
+                    }
+
+                    btn.style.display = 'inline-block';
+                    const key = `2026-${String(i + 1).padStart(2, '0')}`;
+                    const isFinished = this.state.__STATUS__?.[this.currentUser]?.[key];
+
+                    if (isFinished) {
+                        btn.disabled = false; // Clickable to revoke
+                        btn.innerText = 'Fertig';
+                        btn.style.background = '#ccc';
+                        btn.style.cursor = 'pointer';
+                        btn.title = 'Klicken zum Zurücksetzen';
+                    } else {
+                        btn.disabled = false;
+                        btn.innerText = 'Fertig melden';
+                        btn.style.background = 'var(--primary-color)';
+                        btn.style.cursor = 'pointer';
+                        btn.title = 'Monat als fertig markieren';
+                    }
+                }
+            }
+
+            updateSummary() {
+                const list = [];
+                CONFIG.employees.forEach(emp => {
+                    if (!this.state[emp.id]) return;
+
+                    const entries = Object.keys(this.state[emp.id]).sort().map(d => ({
+                        date: d,
+                        val: this.state[emp.id][d]
+                    })).filter(e => e.val.type === 'I');
+
+                    if (entries.length === 0) return;
+
+                    const ranges = [];
+                    let rStart = entries[0];
+                    let rEnd = entries[0];
+
+                    for (let i = 1; i < entries.length; i++) {
+                        const curr = entries[i];
+
+                        // Check if consecutive day
+                        const d1 = new Date(rEnd.date);
+                        d1.setDate(d1.getDate() + 1);
+                        const isNext = this.formatDate(d1) === curr.date;
+
+                        // Check if same type/text
+                        if (isNext) {
+                            rEnd = curr;
+                        } else {
+                            ranges.push(this.formatRange(rStart, rEnd));
+                            rStart = curr;
+                            rEnd = curr;
+                        }
+                    }
+                    ranges.push(this.formatRange(rStart, rEnd));
+
+                    list.push(`${emp.name}: ${ranges.join(', ')}`);
+                });
+
+                document.getElementById('exportSummary').value = list.join('\n');
+
+                // Update Status Summary
+                this.updateStatusSummary();
+            }
+
+            updateStatusSummary() {
+                const statusArea = document.getElementById('statusSummary');
+                if (!statusArea) return;
+
+                if (!this.state.__STATUS__) {
+                    statusArea.value = 'Noch niemand fertig...';
+                    return;
+                }
+
+                let text = '';
+                CONFIG.employees.forEach(emp => {
+                    const st = this.state.__STATUS__[emp.id];
+                    if (st) {
+                        const finishedMonths = Object.keys(st).filter(k => st[k]).map(k => {
+                            // k = "2026-01"
+                            const parts = k.split('-');
+                            if (parts.length < 2) return k;
+                            const mIndex = parseInt(parts[1]) - 1;
+                            return new Date(2026, mIndex, 1).toLocaleString('de-DE', { month: 'short' });
+                        });
+                        if (finishedMonths.length > 0) {
+                            text += `${emp.name}: ${finishedMonths.join(', ')} fertig\n`;
+                        }
+                    }
+                });
+
+                statusArea.value = text || 'Noch niemand fertig...';
+            }
+
+            formatRange(start, end) {
+                const fmt = d => {
+                    const [y, m, day] = d.split('-');
+                    return `${day}.${m}.`;
+                };
+
+                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)}`;
+                return `${datePart}`;
+            }
+        }
+
+        const app = new App();
+    </script>
+
+</body>
+
+</html>
