@@ -419,27 +419,27 @@
         }
 
         .status-vacation {
-            background-color: var(--status-vacation);
+            background-color: var(--status-vacation) !important;
             color: white;
         }
 
         .status-absent {
-            background-color: var(--danger-color);
+            background-color: var(--danger-color) !important;
             color: white;
         }
 
         .status-possible {
-            background-color: var(--status-possible);
+            background-color: var(--status-possible) !important;
             color: white;
         }
 
         .status-avoid {
-            background-color: var(--status-avoid);
+            background-color: var(--status-avoid) !important;
             color: white;
         }
 
         .status-assigned {
-            background-color: var(--status-assigned);
+            background-color: var(--status-assigned) !important;
             color: white;
         }
 
@@ -1690,20 +1690,11 @@
             }
 
             distributeServices(monthIndex) {
-                if (!confirm(`Dienste für Monat ${monthIndex + 1} automatisch verteilen? Bestehende Zuteilungen (Lila) werden überschrieben.`)) return;
+                if (!confirm(`Dienste für Monat ${monthIndex + 1} automatisch verteilen? Bestehende Zuteilungen (Lila) bleiben erhalten, nur Lücken werden gefüllt.`)) return;
 
                 const monthDates = this.dates.filter(d => d.month === monthIndex);
 
-                // 1. Clear existing 'D' assignments for this month
-                CONFIG.employees.forEach(emp => {
-                    if (!this.state[emp.id]) return;
-                    monthDates.forEach(d => {
-                        const st = this.state[emp.id][d.dateStr];
-                        if (st && st.type === 'D') {
-                            delete this.state[emp.id][d.dateStr];
-                        }
-                    });
-                });
+                // 1. REMOVED: Do NOT Clear existing 'D' assignments. We only fill gaps.
 
                 // Helper to get score
                 const getScore = (empId, dateStr) => {
@@ -1722,6 +1713,14 @@
                     return st && st.type === 'A';
                 };
 
+                // Helper: Check if ANYONE has 'D' on this day
+                const isDayAssigned = (dateStr) => {
+                    return CONFIG.employees.some(emp => {
+                        const st = this.state[emp.id]?.[dateStr];
+                        return st && st.type === 'D';
+                    });
+                };
+
                 // 2. Identify Friday-Sunday Blocks
                 const usageMap = {}; // dateStr -> assignedEmpId
                 const fridays = monthDates.filter(d => d.dayName === 'Fr');
@@ -1737,6 +1736,14 @@
 
                     if (satObj && satObj.month === monthIndex) blockDates.push(satObj);
                     if (sunObj && sunObj.month === monthIndex) blockDates.push(sunObj);
+
+                    // Check if ANY day in this block is already assigned
+                    // If so, we assume Manual Control and SKIP this block entirely.
+                    const isBlockTouched = blockDates.some(d => isDayAssigned(d.dateStr));
+                    if (isBlockTouched) {
+                        blockDates.forEach(d => usageMap[d.dateStr] = 'manual');
+                        return;
+                    }
 
                     // Find best candidate
                     let bestEmp = null;
@@ -1781,7 +1788,8 @@
 
                 // 3. Fill Weekdays (Mon-Thu)
                 monthDates.forEach(d => {
-                    if (usageMap[d.dateStr]) return; // Already assigned
+                    if (usageMap[d.dateStr]) return; // Already handled (assigned or skipped)
+                    if (isDayAssigned(d.dateStr)) return; // Already manually assigned
                     if (d.isWeekend) return;
 
                     let bestEmp = null;
@@ -1789,9 +1797,6 @@
 
                     CONFIG.employees.forEach(emp => {
                         if (isAbsent(emp.id, d.dateStr)) return;
-
-                        // Skip if already assigned on this day (impossible if single slot, but good for safety)
-                        if (this.state[emp.id]?.[d.dateStr]?.type === 'D') return;
 
                         let score = getScore(emp.id, d.dateStr);
                         score += Math.random();
@@ -1810,7 +1815,7 @@
 
                 this.saveState();
                 this.render();
-                alert('Dienste wurden automatisch verteilt.');
+                alert('Dienste wurden automatisch verteilt (Lücken gefüllt).');
             }
 
             updateMonthButtons() {
