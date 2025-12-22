@@ -1958,54 +1958,65 @@
                 return `${datePart}`;
             }
             showRoster() {
-                const container = document.getElementById('rosterContainer');
-                let html = `
-                    <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                        <thead>
-                            <tr style="background:#f0f0f0; border-bottom:2px solid #ccc;">
-                                <th style="padding:8px; text-align:left;">Datum</th>
-                                <th style="padding:8px; text-align:left;">Wochentag</th>
-                                <th style="padding:8px; text-align:left;">Diensthabender</th>
+                try {
+                    console.log('Opening Roster...');
+                    const container = document.getElementById('rosterContainer');
+                    if (!container) {
+                        alert('Error: Roster Container not found!');
+                        return;
+                    }
+
+                    let html = `
+                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                            <thead>
+                                <tr style="background:#f0f0f0; border-bottom:2px solid #ccc;">
+                                    <th style="padding:8px; text-align:left;">Datum</th>
+                                    <th style="padding:8px; text-align:left;">Wochentag</th>
+                                    <th style="padding:8px; text-align:left;">Diensthabender</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    this.dates.forEach(d => {
+                        let assignedName = '-';
+                        let assignedId = null;
+
+                        // Find who has 'D'
+                        CONFIG.employees.forEach(emp => {
+                            const st = this.state[emp.id]?.[d.dateStr];
+                            if (st && st.type === 'D') {
+                                assignedName = emp.name;
+                                assignedId = emp.id;
+                            }
+                        });
+
+                        // Styling
+                        let rowStyle = 'border-bottom:1px solid #eee;';
+                        if (d.isWeekend || d.holiday) rowStyle += 'background-color: var(--status-weekend);';
+                        if (d.day === 1) rowStyle += 'border-top: 2px solid #ccc;'; // Month sep
+
+                        const dayName = d.date.toLocaleString('de-DE', { weekday: 'short' });
+                        const dateStr = d.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                        html += `
+                            <tr style="${rowStyle}">
+                                <td style="padding:6px;">${dateStr}</td>
+                                <td style="padding:6px;">${dayName}</td>
+                                <td style="padding:6px; font-weight:${assignedId ? 'bold' : 'normal'}; color:${assignedId ? 'var(--status-assigned)' : 'inherit'};">
+                                    ${assignedName}
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                this.dates.forEach(d => {
-                    let assignedName = '-';
-                    let assignedId = null;
-
-                    // Find who has 'D'
-                    CONFIG.employees.forEach(emp => {
-                        const st = this.state[emp.id]?.[d.dateStr];
-                        if (st && st.type === 'D') {
-                            assignedName = emp.name;
-                            assignedId = emp.id;
-                        }
+                        `;
                     });
 
-                    // Styling
-                    let rowStyle = 'border-bottom:1px solid #eee;';
-                    if (d.isWeekend || d.holiday) rowStyle += 'background-color: var(--status-weekend);';
-                    if (d.day === 1) rowStyle += 'border-top: 2px solid #ccc;'; // Month sep
-
-                    const dayName = d.date.toLocaleString('de-DE', { weekday: 'short' });
-                    const dateStr = d.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-                    html += `
-                        <tr style="${rowStyle}">
-                            <td style="padding:6px;">${dateStr}</td>
-                            <td style="padding:6px;">${dayName}</td>
-                            <td style="padding:6px; font-weight:${assignedId ? 'bold' : 'normal'}; color:${assignedId ? 'var(--status-assigned)' : 'inherit'};">
-                                ${assignedName}
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                html += '</tbody></table>';
-                container.innerHTML = html;
-                document.getElementById('rosterModal').style.display = 'flex';
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                    document.getElementById('rosterModal').style.display = 'flex';
+                } catch (e) {
+                    console.error(e);
+                    alert('Fehler beim Öffnen der Liste: ' + e.message);
+                }
             }
 
             exportRoster() {
