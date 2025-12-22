@@ -913,7 +913,16 @@
                 document.getElementById('loginModal').style.display = 'none';
 
                 // UI RESTRICTION for non-admins
-                // UI RESTRICTION for non-admins - Removed as elements are gone.
+                const dLabel = document.getElementById('mode-label-D');
+                if (dLabel) {
+                    if (this.currentUser === 'admin') {
+                        dLabel.style.display = 'flex';
+                    } else {
+                        dLabel.style.display = 'none';
+                        // Force mode to I if they were somehow on D
+                        if (this.currentMode === 'D') this.setMode('I');
+                    }
+                }
 
                 // UI RESTRICTION for Reset/Import/Export
                 const displayStyle = (this.currentUser === 'admin') ? 'inline-block' : 'none';
