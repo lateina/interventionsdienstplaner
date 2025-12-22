@@ -955,6 +955,7 @@
             scrollToMonth(index) {
                 if (index < 0 || index > 11) return;
                 this.currentMonthIndex = index;
+                this.updateStats(index);
 
                 const container = document.getElementById('calendar'); // Updated scroll target
                 const el = document.getElementById(`month-header-${index}`);
@@ -1563,7 +1564,7 @@
                     // Monthly Stats
                     monthDates.forEach(d => {
                         const status = this.state[emp.id]?.[d.dateStr];
-                        if (status && status.type === 'I') {
+                        if (status && status.type === 'D') {
                             mTotal++;
                             if (d.isWeekend || d.holiday) {
                                 mWeekend++;
