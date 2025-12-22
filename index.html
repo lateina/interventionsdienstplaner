@@ -1500,6 +1500,9 @@
                         // Interaction Events
                         cell.onmousedown = (e) => {
                             e.preventDefault();
+                            if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+                                document.activeElement.blur();
+                            }
                             this.handleMouseDown(emp.id, d.dateStr);
                         };
                         cell.onmouseover = () => this.handleMouseOver(emp.id, d.dateStr);
