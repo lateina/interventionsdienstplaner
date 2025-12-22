@@ -1475,6 +1475,9 @@
                         const status = this.state[emp.id]?.[d.dateStr];
                         if (status) {
                             if (status.type === 'I') classes.push('status-service');
+                            if (status.type === 'M') classes.push('status-possible');
+                            if (status.type === 'K') classes.push('status-avoid');
+                            if (status.type === 'D') classes.push('status-assigned');
                             if (status.type === 'A') classes.push('status-absent');
                             if (status.text) classes.push('has-text');
                         }
