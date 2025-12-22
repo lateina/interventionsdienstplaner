@@ -1615,11 +1615,32 @@
                         return;
                     }
 
+                    // 3. Weekend Check (Rolling 2 Months)
+                    // If current month has NO weekend service, PREVIOUS month must have one.
+                    const hasCurrentWeekend = this.hasWeekendService(idx);
+                    if (!hasCurrentWeekend && idx > 0) {
+                        // Check previous month
+                        const hasPrevWeekend = this.hasWeekendService(idx - 1);
+                        if (!hasPrevWeekend) {
+                            alert('Fehler: In den letzten zwei Monaten wurde kein Wochenend-Dienstwunsch eingetragen.\nBitte mindestens ein Wochenende in diesem oder im letzten Monat wählen.');
+                            return;
+                        }
+                    }
+
                     this.state.__STATUS__[this.currentUser][key] = true;
                     this.saveState();
                     this.updateMonthButtons();
                     this.updateStatusSummary();
                 }
+            }
+
+            hasWeekendService(monthIndex) {
+                const monthDates = this.dates.filter(d => d.month === monthIndex);
+                return monthDates.some(d => {
+                    if (!d.isWeekend) return false;
+                    const status = this.state[this.currentUser]?.[d.dateStr];
+                    return status && status.type === 'I';
+                });
             }
 
             updateMonthButtons() {
