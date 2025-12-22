@@ -552,10 +552,27 @@
                 <button id="btnImport" class="primary" style="display:none"
                     onclick="document.getElementById('fileInput').click()">Import
                     JSON</button>
+                <button id="btnRoster" class="primary" style="display:none; background-color: var(--status-assigned);"
+                    onclick="app.showRoster()">Dienstliste</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
             </div>
         </div>
     </header>
+
+    <!-- Roster Modal -->
+    <div id="rosterModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; max-height: 90vh; display:flex; flex-direction:column;">
+            <h3>Dienstliste 2026</h3>
+            <div id="rosterContainer"
+                style="overflow-y: auto; flex: 1; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;">
+                <!-- Table will be injected here -->
+            </div>
+            <div class="modal-actions">
+                <button onclick="app.exportRoster()" class="primary">Als CSV speichern</button>
+                <button onclick="document.getElementById('rosterModal').style.display='none'">Schließen</button>
+            </div>
+        </div>
+    </div>
 
     <div class="calendar-toolbar">
         <div class="mode-selector"
@@ -929,6 +946,7 @@
                 document.getElementById('btnReset').style.display = displayStyle;
                 document.getElementById('btnExport').style.display = displayStyle;
                 document.getElementById('btnImport').style.display = displayStyle;
+                document.getElementById('btnRoster').style.display = displayStyle;
 
                 // Finish Button removed from header, now in calendar
 
