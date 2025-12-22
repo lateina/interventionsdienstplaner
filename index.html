@@ -1988,17 +1988,20 @@
                     `;
 
                     this.dates.forEach(d => {
-                        let assignedName = '-';
-                        let assignedId = null;
+                        let assignedNames = [];
+                        let assignedIds = [];
 
                         // Find who has 'D'
                         CONFIG.employees.forEach(emp => {
                             const st = this.state[emp.id]?.[d.dateStr];
                             if (st && st.type === 'D') {
-                                assignedName = emp.name;
-                                assignedId = emp.id;
+                                assignedNames.push(emp.name);
+                                assignedIds.push(emp.id);
                             }
                         });
+
+                        const assignedNameStr = assignedNames.length > 0 ? assignedNames.join(', ') : '-';
+                        const hasAssignment = assignedNames.length > 0;
 
                         // Styling
                         let rowStyle = 'border-bottom:1px solid #eee;';
@@ -2012,8 +2015,8 @@
                             <tr style="${rowStyle}">
                                 <td style="padding:6px;">${dateStr}</td>
                                 <td style="padding:6px;">${dayName}</td>
-                                <td style="padding:6px; font-weight:${assignedId ? 'bold' : 'normal'}; color:${assignedId ? 'var(--status-assigned)' : 'inherit'};">
-                                    ${assignedName}
+                                <td style="padding:6px; font-weight:${hasAssignment ? 'bold' : 'normal'}; color:${hasAssignment ? 'var(--status-assigned)' : 'inherit'};">
+                                    ${assignedNameStr}
                                 </td>
                             </tr>
                         `;
@@ -2032,18 +2035,19 @@
                 let csv = 'Datum;Wochentag;Diensthabender\n';
 
                 this.dates.forEach(d => {
-                    let assignedName = '';
+                    let assignedNames = [];
                     CONFIG.employees.forEach(emp => {
                         const st = this.state[emp.id]?.[d.dateStr];
                         if (st && st.type === 'D') {
-                            assignedName = emp.name;
+                            assignedNames.push(emp.name);
                         }
                     });
+                    const assignedNameStr = assignedNames.join(', ');
 
                     const dayName = d.date.toLocaleString('de-DE', { weekday: 'short' });
                     const dateStr = d.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-                    csv += `${dateStr};${dayName};${assignedName}\n`;
+                    csv += `${dateStr};${dayName};${assignedNameStr}\n`;
                 });
 
                 // UTF-8 BOM for Excel
