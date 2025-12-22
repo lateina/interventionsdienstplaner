@@ -26,6 +26,8 @@
             /* Blue 500 */
             --status-avoid: #f472b6;
             /* Pink 400 */
+            --status-assigned: #a855f7;
+            /* Purple 500 */
 
             --status-weekend: #f1f5f9;
             --status-holiday: #f5f5f5;
@@ -555,6 +557,11 @@
             style="margin-right: 30px; display: flex; gap: 10px; background: #f5f5f5; padding: 5px; border-radius: 8px;">
             <label
                 style="cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                <input type="radio" name="mode" value="D" onchange="app.setMode('D')">
+                <span style="font-weight: bold; color: var(--status-assigned);">Dienst (D)</span>
+            </label>
+            <label
+                style="cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: white; border-radius: 5px; border: 1px solid #ddd;">
                 <input type="radio" name="mode" value="I" checked onchange="app.setMode('I')">
                 <span style="font-weight: bold; color: var(--status-service);">Dienstwunsch (I)</span>
             </label>
@@ -576,6 +583,9 @@
         </div>
 
         <div class="legend" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <div class="legend-item">
+                <div class="color-box" style="background:var(--status-assigned)"></div> Dienst
+            </div>
             <div class="legend-item">
                 <div class="color-box" style="background:var(--status-service)"></div> Dienstwunsch
             </div>
@@ -1001,6 +1011,8 @@
                             cell.classList.add('status-possible');
                         } else if (st.type === 'K') {
                             cell.classList.add('status-avoid');
+                        } else if (st.type === 'D') {
+                            cell.classList.add('status-assigned');
                         } else {
                             cell.classList.add('status-service');
                         }
@@ -1241,7 +1253,8 @@
 
                 const assignedEmployees = CONFIG.employees.filter(emp => {
                     const status = this.state[emp.id]?.[dateStr];
-                    return status && status.type === 'I';
+                    // Updated: Validation now checks for FINAL ASSIGNMENT ('D')
+                    return status && status.type === 'D';
                 });
 
                 const count = assignedEmployees.length;
@@ -1682,7 +1695,7 @@
                     const entries = Object.keys(this.state[emp.id]).sort().map(d => ({
                         date: d,
                         val: this.state[emp.id][d]
-                    })).filter(e => e.val.type === 'I');
+                    })).filter(e => e.val.type === 'D'); // Updated: Summary only shows 'D'
 
                     if (entries.length === 0) return;
 
