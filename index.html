@@ -1584,6 +1584,37 @@
                         this.updateStatusSummary();
                     }
                 } else {
+                    // VALIDATION LOGIC
+                    const monthDates = this.dates.filter(d => d.month === idx);
+                    let countI = 0;
+                    let countM = 0;
+                    let countA = 0;
+                    const totalDays = monthDates.length;
+
+                    monthDates.forEach(d => {
+                        const st = this.state[this.currentUser]?.[d.dateStr];
+                        if (st) {
+                            if (st.type === 'I') countI++;
+                            else if (st.type === 'M') countM++;
+                            else if (st.type === 'A') countA++;
+                        }
+                    });
+
+                    const availableDays = totalDays - countA;
+                    const minM = Math.ceil(availableDays * 0.5);
+
+                    // 1. Max 3 I
+                    if (countI > 3) {
+                        alert(`Zu viele Dienstwünsche! Maximal 3 erlaubt (Aktuell: ${countI}).`);
+                        return;
+                    }
+
+                    // 2. Min 50% M of available
+                    if (countM < minM) {
+                        alert(`Zu wenige "Dienst möglich" Einträge!\nVerfügbare Tage: ${availableDays}\nBenötigt (50%): ${minM}\nAktuell: ${countM}`);
+                        return;
+                    }
+
                     this.state.__STATUS__[this.currentUser][key] = true;
                     this.saveState();
                     this.updateMonthButtons();
