@@ -1486,12 +1486,7 @@
                 reader.readAsText(file);
             }
 
-            showRoster() {
-                const modal = document.getElementById('rosterModal');
-                const container = document.getElementById('rosterContainer');
-                container.innerHTML = this.renderRosterTable();
-                modal.style.display = 'flex';
-            }
+
 
             showStats() {
                 const modal = document.getElementById('statsModal');
@@ -2174,7 +2169,7 @@
             updateMonthButtons() {
                 // Iterate all 12 months
                 for (let i = 0; i < 12; i++) {
-                    const btn = document.getElementById(`btn - finish - ${i} `);
+                    const btn = document.getElementById(`btn-finish-${i}`);
                     if (!btn) continue;
 
                     if (!this.currentUser || this.currentUser === 'admin' || this.currentUser === 'sekretariat') {
@@ -2183,7 +2178,7 @@
                     }
 
                     btn.style.display = 'inline-block';
-                    const key = `2026 - ${String(i + 1).padStart(2, '0')} `;
+                    const key = `2026-${String(i + 1).padStart(2, '0')}`;
                     const isFinished = this.state.__STATUS__?.[this.currentUser]?.[key];
 
                     if (isFinished) {
@@ -2237,7 +2232,7 @@
                     }
                     ranges.push(this.formatRange(rStart, rEnd));
 
-                    list.push(`${emp.name}: ${ranges.join(', ')} `);
+                    list.push(`${emp.name}: ${ranges.join(', ')}`);
                 });
 
                 document.getElementById('exportSummary').value = list.join('\n');
@@ -2281,8 +2276,8 @@
                     return `${day}.${m}.`;
                 };
 
-                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)} `;
-                return `${datePart} `;
+                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)}`;
+                return `${datePart}`;
             }
             showRoster() {
                 try {
@@ -2294,7 +2289,7 @@
                     }
 
                     let html = `
-                            < table style = "width:100%; border-collapse:collapse; font-size:0.9rem;" >
+                            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
                             <thead>
                                 <tr style="background:#f0f0f0; border-bottom:2px solid #ccc;">
                                     <th style="padding:8px; text-align:left;">Datum</th>
@@ -2340,7 +2335,7 @@
                         `;
                     });
 
-                    html += '</tbody></table > ';
+                    html += '</tbody></table>';
                     container.innerHTML = html;
                     document.getElementById('rosterModal').style.display = 'flex';
                 } catch (e) {
