@@ -1823,30 +1823,33 @@
                 };
 
                 // Helper to get score
-                // NOW INCLUDES LOAD BALANCING PENALTIES
+                // NOW INCLUDES LOAD BALANCING PENALTIES FOR ALL (except Absent)
                 const getScore = (empId, dateStr, isWeekendOrHoliday) => {
                     const st = this.state[empId]?.[dateStr];
-                    if (!st) {
-                        // Base Score for empty slot
-                        let score = 0;
-                        const s = currentStats[empId];
 
-                        // PENALTIES
-                        if (isWeekendOrHoliday) {
-                            // Heavy penalty for uneven monthly weekends (blocks hoarding)
-                            score -= (s.yearWeekend * 50) + (s.monthWeekend * 1000);
-                        } else {
-                            // Weekday penalty
-                            score -= (s.yearWeekday * 20) + (s.monthWeekday * 500);
-                        }
-                        return score;
+                    // 1. Hard Constraints
+                    if (st && st.type === 'A') return -10000; // Forbidden
+
+                    // 2. Base Score (Wishes)
+                    let baseScore = 0;
+                    if (st) {
+                        if (st.type === 'I') baseScore = 100;    // Preferred
+                        else if (st.type === 'M') baseScore = 10; // Possible
+                        else if (st.type === 'K') baseScore = -100; // Avoid
                     }
 
-                    if (st.type === 'A') return -10000; // Forbidden
-                    if (st.type === 'I') return 100;    // Preferred
-                    if (st.type === 'M') return 10;     // Possible
-                    if (st.type === 'K') return -100;   // Avoid
-                    return 0; // Should not happen for pre-filled, but fallback
+                    // 3. Load Balancing Penalty
+                    const s = currentStats[empId];
+                    let penalty = 0;
+                    if (isWeekendOrHoliday) {
+                        // Heavy penalty for uneven monthly weekends (blocks hoarding)
+                        penalty = (s.yearWeekend * 50) + (s.monthWeekend * 1000);
+                    } else {
+                        // Weekday penalty
+                        penalty = (s.yearWeekday * 20) + (s.monthWeekday * 500);
+                    }
+
+                    return baseScore - penalty;
                 };
 
                 // Helper to check absence
