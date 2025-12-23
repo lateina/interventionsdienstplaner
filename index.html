@@ -1512,7 +1512,7 @@
                     const weekendPct = s.total > 0 ? (s.weekend / s.total) * 100 : 0;
 
                     html += `
-                            < div class="chart-row" >
+                            <div class="chart-row">
                             <div class="chart-label">${s.name}</div>
                             <div class="chart-track">
                                 <div class="chart-bar" style="width: ${widthPct}%">
@@ -1522,7 +1522,7 @@
                                     ${s.total}
                                 </div>
                             </div>
-                        </div >
+                        </div>
                             `;
                 });
 
@@ -1544,7 +1544,7 @@
                         const monthName = new Date(CONFIG.year, d.month, 1).toLocaleString('de-DE', { month: 'long' });
                         const monthEl = document.createElement('div');
                         monthEl.className = 'cell header-cell sticky-header month-header';
-                        monthEl.id = `month - header - ${d.month} `;
+                        monthEl.id = `month-header-${d.month}`;
                         monthEl.style.gridColumnStart = colStart + index;
 
                         // Layout
@@ -1552,14 +1552,14 @@
                         monthEl.style.alignItems = 'center';
                         monthEl.style.justifyContent = 'space-between';
 
-                        let content = `< span > ${monthName}</span > `;
+                        let content = `<span>${monthName}</span>`;
 
                         if (this.currentUser === 'admin') {
-                            content += `< button onclick = "app.distributeServices(${d.month})" style = "font-size:0.7rem; margin-left:10px; cursor:pointer;" > Auto - Vert.</button > `;
+                            content += `<button onclick="app.distributeServices(${d.month})" style="font-size:0.7rem; margin-left:10px; cursor:pointer;">Auto-Vert.</button>`;
                         }
 
                         // Finish button placeholder (appended later)
-                        content += `< button id = "btn-finish-${d.month}" onclick = "app.markMonthFinished(${d.month})" class="finish-btn" style = "display:none; font-size:0.7rem;" > Fertig</button > `;
+                        content += `<button id="btn-finish-${d.month}" onclick="app.markMonthFinished(${d.month})" class="finish-btn" style="display:none; font-size:0.7rem;">Fertig</button>`;
 
                         monthEl.innerHTML = content;
                         container.appendChild(monthEl);
@@ -1572,7 +1572,7 @@
                         // Add Month Finish Button
                         const btn = document.createElement('button');
                         const mIndex = d.month;
-                        btn.id = `btn - finish - ${mIndex} `;
+                        btn.id = `btn-finish-${mIndex}`;
                         btn.style.marginLeft = '10px';
                         btn.style.fontSize = '0.7rem';
                         btn.style.padding = '2px 8px';
@@ -1593,7 +1593,7 @@
                             span++;
                             i++;
                         }
-                        monthEl.style.gridColumnEnd = `span ${span} `;
+                        monthEl.style.gridColumnEnd = `span ${span}`;
                         container.appendChild(monthEl);
 
                         currentMonth = d.month;
@@ -1617,7 +1617,7 @@
                             shEl.className = 'cell header-cell sticky-header school-holiday-row';
                             shEl.style.gridRow = 2;
                             shEl.style.gridColumnStart = startIdx + 2;
-                            shEl.style.gridColumnEnd = `span ${span} `;
+                            shEl.style.gridColumnEnd = `span ${span}`;
                             shEl.innerText = sh.name;
                             shEl.title = sh.name;
                             shEl.style.backgroundColor = '#cbd5e1'; // Darker background
@@ -1645,13 +1645,13 @@
 
                 this.dates.forEach((d, i) => {
                     const dayEl = document.createElement('div');
-                    dayEl.className = `cell header - cell sticky - header day - header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''} `;
+                    dayEl.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
 
                     let text = '';
                     if (d.holiday) text = d.holiday;
                     // Removed school holiday text from day header as it's now above
 
-                    dayEl.innerHTML = `< span > ${d.day}</span > ${text ? `<span class="header-holiday-text">${text}</span>` : ''} `;
+                    dayEl.innerHTML = `<span>${d.day}</span>${text ? `<span class="header-holiday-text">${text}</span>` : ''}`;
                     dayEl.style.gridRow = 3; // Shifted
                     dayEl.style.gridColumn = i + 2;
                     dayEl.title = text || '';
@@ -1664,8 +1664,8 @@
                     const nameEl = document.createElement('div');
                     nameEl.className = 'cell employee-row-header sticky-col';
                     nameEl.style.gridRow = empIndex + 4; // Shifted
-                    nameEl.id = `emp - name - ${emp.id} `; // Add ID for stats updates
-                    nameEl.innerHTML = `${emp.name} `;
+                    nameEl.id = `emp-name-${emp.id}`; // Add ID for stats updates
+                    nameEl.innerHTML = `${emp.name}`;
                     container.appendChild(nameEl);
 
                     // Day Cells
@@ -1694,10 +1694,10 @@
                         cell.className = classes.join(' ');
                         cell.style.gridRow = empIndex + 4; // Shifted
                         cell.style.gridColumn = dateIndex + 2;
-                        cell.id = `cell - ${emp.id} -${d.dateStr} `;
+                        cell.id = `cell-${emp.id}-${d.dateStr}`;
 
                         if (status && status.text) {
-                            cell.innerHTML = `< span class="cell-text" > ${status.text}</span > `;
+                            cell.innerHTML = `<span class="cell-text">${status.text}</span>`;
                             // cell.title = status.text; // Removed for custom tooltip
                         }
 
@@ -1731,7 +1731,7 @@
                     const issues = this.validateCoverage(d);
                     const cell = document.createElement('div');
                     cell.className = 'cell validation-cell';
-                    cell.id = `val - ${d.dateStr} `;
+                    cell.id = `val-${d.dateStr}`;
 
                     if (d.isWeekend || d.holiday) cell.style.background = 'var(--status-weekend)';
 
@@ -1739,7 +1739,7 @@
                     cell.style.gridColumn = dateIndex + 2;
 
                     if (issues) {
-                        cell.innerHTML = `< span class="warning-text" > ${issues.join('<br>')}</span > `;
+                        cell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
                         cell.title = 'Fehlend: ' + issues.join(', ');
                         cell.style.background = '#fee2e2';
                     }
@@ -1757,7 +1757,7 @@
                     let limit = container.scrollLeft + 250;
                     let idx = 0;
                     for (let i = 0; i < 12; i++) {
-                        const el = document.getElementById(`month - header - ${i} `);
+                        const el = document.getElementById(`month-header-${i}`);
                         if (el && el.offsetLeft <= limit) {
                             idx = i;
                         } else {
@@ -1806,7 +1806,7 @@
                     });
 
                     // Update UI
-                    const nameEl = document.getElementById(`emp - name - ${emp.id} `);
+                    const nameEl = document.getElementById(`emp-name-${emp.id}`);
                     if (nameEl) {
                         nameEl.innerHTML = `
                             ${emp.name}
