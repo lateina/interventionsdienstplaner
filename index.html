@@ -548,6 +548,8 @@
             <h1>Interventionsdienst Planer 2026</h1>
             <div class="controls">
                 <button id="btnReset" onclick="app.resetData()">Reset</button>
+                <button id="btnUndo" class="primary" style="display:none; background-color: #f59e0b;"
+                    onclick="app.undo()">Undo (Ctrl+Z)</button>
                 <button id="btnExport" style="display:none" onclick="app.exportData()">Export JSON</button>
                 <button id="btnImport" class="primary" style="display:none"
                     onclick="document.getElementById('fileInput').click()">Import
@@ -772,6 +774,7 @@
             constructor() {
                 this.currentUser = null;
                 this.state = {}; // Will be loaded
+                this.undoStack = []; // Initialize Undo Stack
                 this.dates = this.generateDates();
 
                 // Drag State
@@ -794,6 +797,16 @@
                 // this.bypassLogin();
 
                 // Keyboard Navigation
+                // Undo Listener
+                document.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                        if (this.currentUser === 'admin' && this.undoStack.length > 0) {
+                            e.preventDefault();
+                            this.undo();
+                        }
+                    }
+                });
+
                 // Keyboard Navigation
                 document.addEventListener('keydown', (e) => {
                     const activeEl = document.activeElement;
@@ -814,6 +827,41 @@
                 });
 
 
+            }
+
+            // NEW: Push Undo State
+            pushUndoState() {
+                if (this.undoStack.length > 20) {
+                    this.undoStack.shift(); // Remove oldest
+                }
+                this.undoStack.push(JSON.parse(JSON.stringify(this.state)));
+                this.updateUndoButton();
+            }
+
+            // NEW: Undo Action
+            undo() {
+                if (this.undoStack.length === 0) return;
+
+                const prevState = this.undoStack.pop();
+                if (prevState) {
+                    this.state = prevState;
+                    this.saveState();
+                    this.render();
+                }
+                this.updateUndoButton();
+            }
+
+            // NEW: Update Undo Button Visibility
+            updateUndoButton() {
+                const btn = document.getElementById('btnUndo');
+                if (!btn) return;
+
+                if (this.currentUser === 'admin' && this.undoStack.length > 0) {
+                    btn.style.display = 'inline-block';
+                    btn.innerText = `Undo (${this.undoStack.length}) (Ctrl+Z)`;
+                } else {
+                    btn.style.display = 'none';
+                }
             }
 
             generateDates() {
@@ -1357,6 +1405,7 @@
             }
 
             render() {
+                this.updateUndoButton();
                 const container = document.getElementById('calendar');
                 container.innerHTML = '';
 
@@ -1725,11 +1774,12 @@
             }
 
             distributeServices(monthIndex) {
-                if (!confirm(`Dienste für Monat ${monthIndex + 1} automatisch verteilen? Bestehende Zuteilungen (Lila) bleiben erhalten, nur Lücken werden gefüllt.`)) return;
+                const monthName = new Date(CONFIG.year, monthIndex, 1).toLocaleString('de-DE', { month: 'long' });
+                if (!confirm(`Dienste für Monat ${monthName} automatisch verteilen? Bestehende Zuteilungen (Lila) bleiben erhalten, nur Lücken werden gefüllt.`)) return;
+
+                this.pushUndoState();
 
                 const monthDates = this.dates.filter(d => d.month === monthIndex);
-
-                // 1. REMOVED: Do NOT Clear existing 'D' assignments. We only fill gaps.
 
                 // Helper to get score
                 const getScore = (empId, dateStr) => {
@@ -1756,9 +1806,26 @@
                     });
                 };
 
+                // Helper: Check if SPECIFIC employee has 'D' on this day
+                const isEmpAssignedOnDate = (empId, dateStr) => {
+                    const st = this.state[empId]?.[dateStr];
+                    return st && st.type === 'D';
+                };
+
+                // Helper: Get adjacent date format yyyy-mm-dd
+                const getAdjacentDateStr = (dateStr, offsetDays) => {
+                    const d = new Date(dateStr);
+                    d.setDate(d.getDate() + offsetDays);
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                };
+
                 // 2. Identify Friday-Sunday Blocks
                 const usageMap = {}; // dateStr -> assignedEmpId
-                const fridays = monthDates.filter(d => d.dayName === 'Fr');
+                // FIX: 'dayName' property does not exist in generateDates(). Use 'weekday' (5 = Friday).
+                const fridays = monthDates.filter(d => d.weekday === 5); // 5 = Friday
 
                 fridays.forEach(fri => {
                     const friDate = new Date(fri.date);
@@ -1787,6 +1854,11 @@
                     CONFIG.employees.forEach(emp => {
                         // Check if absent on ANY day
                         if (blockDates.some(d => isAbsent(emp.id, d.dateStr))) return;
+
+                        // NEW CONSTRAINT: Check THURSDAY before Friday
+                        // If employee worked Thursday, they cannot take the Fri shift.
+                        const prevDayStr = getAdjacentDateStr(fri.dateStr, -1);
+                        if (isEmpAssignedOnDate(emp.id, prevDayStr)) return;
 
                         // Score
                         let score = 0;
@@ -1832,6 +1904,17 @@
 
                     CONFIG.employees.forEach(emp => {
                         if (isAbsent(emp.id, d.dateStr)) return;
+
+                        // NEW CONSTRAINT: Check Previous Day (-1) and Next Day (+1)
+                        // If assigned on either adjacent day, reject.
+                        // This handles Sun->Mon (Sun is D-1 for Mon)
+                        // Mon->Tue (Mon is D-1 for Tue)
+                        // etc.
+                        const prevDayStr = getAdjacentDateStr(d.dateStr, -1);
+                        const nextDayStr = getAdjacentDateStr(d.dateStr, 1);
+
+                        if (isEmpAssignedOnDate(emp.id, prevDayStr)) return;
+                        if (isEmpAssignedOnDate(emp.id, nextDayStr)) return;
 
                         let score = getScore(emp.id, d.dateStr);
                         score += Math.random();
