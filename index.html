@@ -1869,9 +1869,10 @@
                         // 1: 50, 2: 200, 3: 450, 4: 800, 5: 1250, 6: 1800.
                         penalty = (s.yearWeekday * 200) + (Math.pow(s.monthWeekday, 2) * 50);
 
-                        // Soft Cap: If 6 or more, Add Huge Penalty (Prevent 7th service)
-                        if (s.monthWeekday >= 6) {
-                            penalty += 10000;
+                        // Soft Cap: If Total Monthly Shifts (Week + Weekend) >= 6, Add Huge Penalty
+                        // This prevents someone with a Weekend block from getting 4 more weekday shifts.
+                        if (s.monthTotal >= 6) {
+                            penalty += 20000;
                         }
                     }
 
