@@ -1967,6 +1967,13 @@
                             }
                         }
 
+                        // NEW: Hard Limit - Max 1 Weekend Block per month
+                        // If they already have ANY weekend shifts this month, BAN them from taking another block.
+                        const s = currentStats[emp.id];
+                        if (s.monthWeekend > 0) {
+                            score -= 50000;
+                        }
+
                         blockDates.forEach(d => {
                             score += getScore(emp.id, d.dateStr, true);
                         });
