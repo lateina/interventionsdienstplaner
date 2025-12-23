@@ -538,6 +538,59 @@
             background: #f8fafc;
             color: var(--text-main);
         }
+
+        /* Chart Styles */
+        .chart-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .chart-label {
+            width: 120px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chart-track {
+            flex: 1;
+            background: #eee;
+            height: 24px;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chart-bar {
+            height: 100%;
+            background-color: var(--status-assigned);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 5px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .chart-weekend {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.2);
+            /* Darker overlay for weekends */
+            display: flex;
+            align-items: center;
+            padding-left: 5px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.9);
+        }
     </style>
 </head>
 
@@ -557,6 +610,8 @@
                 <button id="btnRoster" class="primary" style="display:none; background-color: var(--status-assigned);"
                     onclick="app.showRoster()">Dienstliste</button>
                 <input type="file" id="fileInput" style="display:none" onchange="app.importData(this)">
+                <button id="btnStats" class="primary" style="display:none; background-color: var(--status-assigned);"
+                    onclick="app.showStats()">Statistik</button>
             </div>
         </div>
     </header>
@@ -572,6 +627,19 @@
             <div class="modal-actions">
                 <button onclick="app.exportRoster()" class="primary">Als CSV speichern</button>
                 <button onclick="document.getElementById('rosterModal').style.display='none'">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="statsModal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="width: 800px; max-width: 95vw;">
+            <h3>Jahres-Statistik 2026 (Grafisch)</h3>
+            <div id="statsChartContainer" style="margin: 20px 0;">
+                <!-- Chart injected here -->
+            </div>
+            <div class="modal-actions">
+                <button onclick="document.getElementById('statsModal').style.display='none'">Schließen</button>
             </div>
         </div>
     </div>
@@ -852,15 +920,28 @@
             }
 
             // NEW: Update Undo Button Visibility
+            // NEW: Update Admin Buttons Visibility
             updateUndoButton() {
-                const btn = document.getElementById('btnUndo');
-                if (!btn) return;
+                const btnUndo = document.getElementById('btnUndo');
+                const btnStats = document.getElementById('btnStats');
 
-                if (this.currentUser === 'admin' && this.undoStack.length > 0) {
-                    btn.style.display = 'inline-block';
-                    btn.innerText = `Undo (${this.undoStack.length}) (Ctrl+Z)`;
-                } else {
-                    btn.style.display = 'none';
+                // Undo Button
+                if (btnUndo) {
+                    if (this.currentUser === 'admin' && this.undoStack.length > 0) {
+                        btnUndo.style.display = 'inline-block';
+                        btnUndo.innerText = `Undo (${this.undoStack.length}) (Ctrl+Z)`;
+                    } else {
+                        btnUndo.style.display = 'none';
+                    }
+                }
+
+                // Stats Button
+                if (btnStats) {
+                    if (this.currentUser === 'admin') {
+                        btnStats.style.display = 'inline-block';
+                    } else {
+                        btnStats.style.display = 'none';
+                    }
                 }
             }
 
@@ -900,6 +981,7 @@
                 // UI for Admin
                 document.getElementById('btnReset').style.display = 'inline-block';
                 document.getElementById('btnImport').style.display = 'inline-block';
+                document.getElementById('btnStats').style.display = 'inline-block';
 
                 // Load Data
                 DataService.load().then(data => {
@@ -1404,6 +1486,50 @@
                 reader.readAsText(file);
             }
 
+            showRoster() {
+                const modal = document.getElementById('rosterModal');
+                const container = document.getElementById('rosterContainer');
+                container.innerHTML = this.renderRosterTable();
+                modal.style.display = 'flex';
+            }
+
+            showStats() {
+                const modal = document.getElementById('statsModal');
+                const container = document.getElementById('statsChartContainer');
+
+                // Calculate Stats
+                const stats = CONFIG.employees.map(emp => {
+                    const s = this.getEmployeeStats(emp.id);
+                    return { name: emp.name, ...s };
+                });
+
+                // Find Max for scaling
+                const maxTotal = Math.max(...stats.map(s => s.total), 1); // Avoid 0 div
+
+                let html = '';
+                stats.forEach(s => {
+                    const widthPct = (s.total / maxTotal) * 100;
+                    const weekendPct = s.total > 0 ? (s.weekend / s.total) * 100 : 0;
+
+                    html += `
+                            < div class="chart-row" >
+                            <div class="chart-label">${s.name}</div>
+                            <div class="chart-track">
+                                <div class="chart-bar" style="width: ${widthPct}%">
+                                    <div class="chart-weekend" style="width: ${weekendPct}%" title="Wochenend-Dienste">
+                                        ${s.weekend > 0 ? s.weekend + ' WE' : ''}
+                                    </div>
+                                    ${s.total}
+                                </div>
+                            </div>
+                        </div >
+                            `;
+                });
+
+                container.innerHTML = html;
+                modal.style.display = 'flex';
+            }
+
             render() {
                 this.updateUndoButton();
                 const container = document.getElementById('calendar');
@@ -1418,7 +1544,7 @@
                         const monthName = new Date(CONFIG.year, d.month, 1).toLocaleString('de-DE', { month: 'long' });
                         const monthEl = document.createElement('div');
                         monthEl.className = 'cell header-cell sticky-header month-header';
-                        monthEl.id = `month-header-${d.month}`;
+                        monthEl.id = `month - header - ${d.month} `;
                         monthEl.style.gridColumnStart = colStart + index;
 
                         // Layout
@@ -1426,14 +1552,14 @@
                         monthEl.style.alignItems = 'center';
                         monthEl.style.justifyContent = 'space-between';
 
-                        let content = `<span>${monthName}</span>`;
+                        let content = `< span > ${monthName}</span > `;
 
                         if (this.currentUser === 'admin') {
-                            content += `<button onclick="app.distributeServices(${d.month})" style="font-size:0.7rem; margin-left:10px; cursor:pointer;">Auto-Vert.</button>`;
+                            content += `< button onclick = "app.distributeServices(${d.month})" style = "font-size:0.7rem; margin-left:10px; cursor:pointer;" > Auto - Vert.</button > `;
                         }
 
                         // Finish button placeholder (appended later)
-                        content += `<button id="btn-finish-${d.month}" onclick="app.markMonthFinished(${d.month})" class="finish-btn" style="display:none; font-size:0.7rem;">Fertig</button>`;
+                        content += `< button id = "btn-finish-${d.month}" onclick = "app.markMonthFinished(${d.month})" class="finish-btn" style = "display:none; font-size:0.7rem;" > Fertig</button > `;
 
                         monthEl.innerHTML = content;
                         container.appendChild(monthEl);
@@ -1446,7 +1572,7 @@
                         // Add Month Finish Button
                         const btn = document.createElement('button');
                         const mIndex = d.month;
-                        btn.id = `btn-finish-${mIndex}`;
+                        btn.id = `btn - finish - ${mIndex} `;
                         btn.style.marginLeft = '10px';
                         btn.style.fontSize = '0.7rem';
                         btn.style.padding = '2px 8px';
@@ -1467,7 +1593,7 @@
                             span++;
                             i++;
                         }
-                        monthEl.style.gridColumnEnd = `span ${span}`;
+                        monthEl.style.gridColumnEnd = `span ${span} `;
                         container.appendChild(monthEl);
 
                         currentMonth = d.month;
@@ -1491,7 +1617,7 @@
                             shEl.className = 'cell header-cell sticky-header school-holiday-row';
                             shEl.style.gridRow = 2;
                             shEl.style.gridColumnStart = startIdx + 2;
-                            shEl.style.gridColumnEnd = `span ${span}`;
+                            shEl.style.gridColumnEnd = `span ${span} `;
                             shEl.innerText = sh.name;
                             shEl.title = sh.name;
                             shEl.style.backgroundColor = '#cbd5e1'; // Darker background
@@ -1519,13 +1645,13 @@
 
                 this.dates.forEach((d, i) => {
                     const dayEl = document.createElement('div');
-                    dayEl.className = `cell header-cell sticky-header day-header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''}`;
+                    dayEl.className = `cell header - cell sticky - header day - header ${d.isWeekend ? 'weekend' : ''} ${d.holiday ? 'holiday' : ''} ${d.isSchoolHoliday ? 'school-holiday' : ''} `;
 
                     let text = '';
                     if (d.holiday) text = d.holiday;
                     // Removed school holiday text from day header as it's now above
 
-                    dayEl.innerHTML = `<span>${d.day}</span>${text ? `<span class="header-holiday-text">${text}</span>` : ''}`;
+                    dayEl.innerHTML = `< span > ${d.day}</span > ${text ? `<span class="header-holiday-text">${text}</span>` : ''} `;
                     dayEl.style.gridRow = 3; // Shifted
                     dayEl.style.gridColumn = i + 2;
                     dayEl.title = text || '';
@@ -1538,8 +1664,8 @@
                     const nameEl = document.createElement('div');
                     nameEl.className = 'cell employee-row-header sticky-col';
                     nameEl.style.gridRow = empIndex + 4; // Shifted
-                    nameEl.id = `emp-name-${emp.id}`; // Add ID for stats updates
-                    nameEl.innerHTML = `${emp.name}`;
+                    nameEl.id = `emp - name - ${emp.id} `; // Add ID for stats updates
+                    nameEl.innerHTML = `${emp.name} `;
                     container.appendChild(nameEl);
 
                     // Day Cells
@@ -1568,10 +1694,10 @@
                         cell.className = classes.join(' ');
                         cell.style.gridRow = empIndex + 4; // Shifted
                         cell.style.gridColumn = dateIndex + 2;
-                        cell.id = `cell-${emp.id}-${d.dateStr}`;
+                        cell.id = `cell - ${emp.id} -${d.dateStr} `;
 
                         if (status && status.text) {
-                            cell.innerHTML = `<span class="cell-text">${status.text}</span>`;
+                            cell.innerHTML = `< span class="cell-text" > ${status.text}</span > `;
                             // cell.title = status.text; // Removed for custom tooltip
                         }
 
@@ -1605,7 +1731,7 @@
                     const issues = this.validateCoverage(d);
                     const cell = document.createElement('div');
                     cell.className = 'cell validation-cell';
-                    cell.id = `val-${d.dateStr}`;
+                    cell.id = `val - ${d.dateStr} `;
 
                     if (d.isWeekend || d.holiday) cell.style.background = 'var(--status-weekend)';
 
@@ -1613,7 +1739,7 @@
                     cell.style.gridColumn = dateIndex + 2;
 
                     if (issues) {
-                        cell.innerHTML = `<span class="warning-text">${issues.join('<br>')}</span>`;
+                        cell.innerHTML = `< span class="warning-text" > ${issues.join('<br>')}</span > `;
                         cell.title = 'Fehlend: ' + issues.join(', ');
                         cell.style.background = '#fee2e2';
                     }
@@ -1631,7 +1757,7 @@
                     let limit = container.scrollLeft + 250;
                     let idx = 0;
                     for (let i = 0; i < 12; i++) {
-                        const el = document.getElementById(`month-header-${i}`);
+                        const el = document.getElementById(`month - header - ${i} `);
                         if (el && el.offsetLeft <= limit) {
                             idx = i;
                         } else {
@@ -1680,13 +1806,13 @@
                     });
 
                     // Update UI
-                    const nameEl = document.getElementById(`emp-name-${emp.id}`);
+                    const nameEl = document.getElementById(`emp - name - ${emp.id} `);
                     if (nameEl) {
                         nameEl.innerHTML = `
-                            ${emp.name} 
-                            <span style="font-size:0.7rem; color:#666; font-weight:normal; display:block; margin-top:2px; margin-left:8px;">
-                                M: ${mTotal} (${mWeekend} WE) | J: ${yTotal} (${yWeekend} WE)
-                            </span>`;
+                            ${emp.name}
+                        <span style="font-size:0.7rem; color:#666; font-weight:normal; display:block; margin-top:2px; margin-left:8px;">
+                            M: ${mTotal} (${mWeekend} WE) | J: ${yTotal} (${yWeekend} WE)
+                        </span>`;
                     }
                 });
             }
@@ -1696,14 +1822,14 @@
 
                 const idx = (typeof monthIndex === 'number') ? monthIndex : (this.currentMonthIndex || 0);
                 const monthStr = new Date(2026, idx, 1).toLocaleString('de-DE', { month: 'short' });
-                const key = `2026-${String(idx + 1).padStart(2, '0')}`;
+                const key = `2026 - ${String(idx + 1).padStart(2, '0')} `;
 
                 if (!this.state.__STATUS__) this.state.__STATUS__ = {};
                 if (!this.state.__STATUS__[this.currentUser]) this.state.__STATUS__[this.currentUser] = {};
 
                 // Toggle Logic
                 if (this.state.__STATUS__[this.currentUser][key]) {
-                    if (confirm(`Status für ${monthStr} zurücksetzen und Bearbeitung wieder erlauben?`)) {
+                    if (confirm(`Status für ${monthStr} zurücksetzen und Bearbeitung wieder erlauben ? `)) {
                         delete this.state.__STATUS__[this.currentUser][key];
                         this.saveState();
                         this.updateMonthButtons();
@@ -1731,13 +1857,13 @@
 
                     // 1. Max 3 I
                     if (countI > 3) {
-                        alert(`Zu viele Dienstwünsche! Maximal 3 erlaubt (Aktuell: ${countI}).`);
+                        alert(`Zu viele Dienstwünsche! Maximal 3 erlaubt(Aktuell: ${countI}).`);
                         return;
                     }
 
                     // 2. Min 50% M of available
                     if (countM < minM) {
-                        alert(`Zu wenige "Dienst möglich" Einträge!\nVerfügbare Tage: ${availableDays}\nBenötigt (50%): ${minM}\nAktuell: ${countM}`);
+                        alert(`Zu wenige "Dienst möglich" Einträge!\nVerfügbare Tage: ${availableDays} \nBenötigt(50 %): ${minM} \nAktuell: ${countM} `);
                         return;
                     }
 
@@ -1788,7 +1914,7 @@
 
             distributeServices(monthIndex) {
                 const monthName = new Date(CONFIG.year, monthIndex, 1).toLocaleString('de-DE', { month: 'long' });
-                if (!confirm(`Dienste für Monat ${monthName} automatisch verteilen? Bestehende Zuteilungen (Lila) bleiben erhalten, nur Lücken werden gefüllt.`)) return;
+                if (!confirm(`Dienste für Monat ${monthName} automatisch verteilen ? Bestehende Zuteilungen(Lila) bleiben erhalten, nur Lücken werden gefüllt.`)) return;
 
                 this.pushUndoState();
 
@@ -1907,7 +2033,7 @@
                     const y = d.getFullYear();
                     const m = String(d.getMonth() + 1).padStart(2, '0');
                     const day = String(d.getDate()).padStart(2, '0');
-                    return `${y}-${m}-${day}`;
+                    return `${y} -${m} -${day} `;
                 };
 
                 // 2. Identify Friday-Sunday Blocks
@@ -2048,7 +2174,7 @@
             updateMonthButtons() {
                 // Iterate all 12 months
                 for (let i = 0; i < 12; i++) {
-                    const btn = document.getElementById(`btn-finish-${i}`);
+                    const btn = document.getElementById(`btn - finish - ${i} `);
                     if (!btn) continue;
 
                     if (!this.currentUser || this.currentUser === 'admin' || this.currentUser === 'sekretariat') {
@@ -2057,7 +2183,7 @@
                     }
 
                     btn.style.display = 'inline-block';
-                    const key = `2026-${String(i + 1).padStart(2, '0')}`;
+                    const key = `2026 - ${String(i + 1).padStart(2, '0')} `;
                     const isFinished = this.state.__STATUS__?.[this.currentUser]?.[key];
 
                     if (isFinished) {
@@ -2111,7 +2237,7 @@
                     }
                     ranges.push(this.formatRange(rStart, rEnd));
 
-                    list.push(`${emp.name}: ${ranges.join(', ')}`);
+                    list.push(`${emp.name}: ${ranges.join(', ')} `);
                 });
 
                 document.getElementById('exportSummary').value = list.join('\n');
@@ -2155,8 +2281,8 @@
                     return `${day}.${m}.`;
                 };
 
-                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)}`;
-                return `${datePart}`;
+                const datePart = (start.date === end.date) ? fmt(start.date) : `${fmt(start.date)} - ${fmt(end.date)} `;
+                return `${datePart} `;
             }
             showRoster() {
                 try {
@@ -2168,7 +2294,7 @@
                     }
 
                     let html = `
-                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                            < table style = "width:100%; border-collapse:collapse; font-size:0.9rem;" >
                             <thead>
                                 <tr style="background:#f0f0f0; border-bottom:2px solid #ccc;">
                                     <th style="padding:8px; text-align:left;">Datum</th>
@@ -2214,7 +2340,7 @@
                         `;
                     });
 
-                    html += '</tbody></table>';
+                    html += '</tbody></table > ';
                     container.innerHTML = html;
                     document.getElementById('rosterModal').style.display = 'flex';
                 } catch (e) {
