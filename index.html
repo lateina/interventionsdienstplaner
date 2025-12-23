@@ -1931,14 +1931,7 @@
                     const isBlockTouched = blockDates.some(d => isDayAssigned(d.dateStr));
                     if (isBlockTouched) {
                         blockDates.forEach(d => usageMap[d.dateStr] = 'manual');
-                        // Update stats for manual assignments to keep balance correct
-                        blockDates.forEach(d => {
-                            CONFIG.employees.forEach(emp => {
-                                if (isEmpAssignedOnDate(emp.id, d.dateStr)) {
-                                    incrementStats(emp.id, true);
-                                }
-                            });
-                        });
+                        // Stats are already updated in initialization, do NOT update here (Double Count Fix)
                         return;
                     }
 
@@ -2002,13 +1995,7 @@
                 monthDates.forEach(d => {
                     if (usageMap[d.dateStr]) return; // Already handled (assigned or skipped)
                     if (isDayAssigned(d.dateStr)) {
-                        // Update stats for manual assignments
-                        CONFIG.employees.forEach(emp => {
-                            if (isEmpAssignedOnDate(emp.id, d.dateStr)) {
-                                // BUGFIX: Treat Holidays as Weekend Load even in weekday loop
-                                incrementStats(emp.id, !!d.holiday);
-                            }
-                        });
+                        // Stats are already updated in initialization, do NOT update here (Double Count Fix)
                         return;
                     }
                     if (d.isWeekend) return;
