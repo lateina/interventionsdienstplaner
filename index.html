@@ -1808,6 +1808,22 @@
                     };
                 });
 
+                // NEW: Pre-scan for existing manual assignments in THIS month to initialize Monthly Stats correctly
+                monthDates.forEach(d => {
+                    CONFIG.employees.forEach(emp => {
+                        const st = this.state[emp.id]?.[d.dateStr];
+                        if (st && st.type === 'D') {
+                            const s = currentStats[emp.id];
+                            s.monthTotal++;
+                            if (d.isWeekend || d.holiday) {
+                                s.monthWeekend++;
+                            } else {
+                                s.monthWeekday++;
+                            }
+                        }
+                    });
+                });
+
                 // Helper to update stats
                 const incrementStats = (empId, isWeekendOrHoliday) => {
                     const s = currentStats[empId];
