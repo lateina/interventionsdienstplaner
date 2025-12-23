@@ -1843,12 +1843,13 @@
                     let penalty = 0;
                     if (isWeekendOrHoliday) {
                         // Heavy penalty for uneven monthly weekends (blocks hoarding)
-                        // Adjusted: Stronger Yearly (100), Weaker Monthly (400) to allow catch-up
-                        penalty = (s.yearWeekend * 100) + (s.monthWeekend * 400);
+                        // Adjusted Aggressively: Yearly (2000) >>> Monthly (500)
+                        penalty = (s.yearWeekend * 2000) + (s.monthWeekend * 500);
                     } else {
                         // Weekday penalty
-                        // Adjusted: Stronger Yearly (40), Much Weaker Monthly (100) to allow catch-up
-                        penalty = (s.yearWeekday * 40) + (s.monthWeekday * 100);
+                        // Adjusted Aggressively: Yearly (500) >>> Monthly (50)
+                        // A deficit of 1 yearly duty justifies taking 10 monthly duties.
+                        penalty = (s.yearWeekday * 500) + (s.monthWeekday * 50);
                     }
 
                     return baseScore - penalty;
@@ -1973,7 +1974,8 @@
                         // Update stats for manual assignments
                         CONFIG.employees.forEach(emp => {
                             if (isEmpAssignedOnDate(emp.id, d.dateStr)) {
-                                incrementStats(emp.id, false);
+                                // BUGFIX: Treat Holidays as Weekend Load even in weekday loop
+                                incrementStats(emp.id, !!d.holiday);
                             }
                         });
                         return;
@@ -1994,7 +1996,8 @@
                         if (isEmpAssignedOnDate(emp.id, prevDayStr)) return;
                         if (isEmpAssignedOnDate(emp.id, nextDayStr)) return;
 
-                        let score = getScore(emp.id, d.dateStr, false); // False = Weekday
+                        // BUGFIX: Treat Holidays as Weekend Load even in weekday loop
+                        let score = getScore(emp.id, d.dateStr, !!d.holiday);
                         score += Math.random();
 
                         if (score > bestScore) {
@@ -2006,7 +2009,8 @@
                     if (bestEmp) {
                         if (!this.state[bestEmp]) this.state[bestEmp] = {};
                         this.state[bestEmp][d.dateStr] = { type: 'D' };
-                        incrementStats(bestEmp, false); // Update Live Stats
+                        // BUGFIX: Treat Holidays as Weekend Load even in weekday loop
+                        incrementStats(bestEmp, !!d.holiday); // Update Live Stats
                     }
                 });
 
