@@ -1843,10 +1843,12 @@
                     let penalty = 0;
                     if (isWeekendOrHoliday) {
                         // Heavy penalty for uneven monthly weekends (blocks hoarding)
-                        penalty = (s.yearWeekend * 50) + (s.monthWeekend * 1000);
+                        // Adjusted: Stronger Yearly (100), Weaker Monthly (400) to allow catch-up
+                        penalty = (s.yearWeekend * 100) + (s.monthWeekend * 400);
                     } else {
                         // Weekday penalty
-                        penalty = (s.yearWeekday * 20) + (s.monthWeekday * 500);
+                        // Adjusted: Stronger Yearly (40), Much Weaker Monthly (100) to allow catch-up
+                        penalty = (s.yearWeekday * 40) + (s.monthWeekday * 100);
                     }
 
                     return baseScore - penalty;
