@@ -1863,11 +1863,12 @@
                         penalty = (s.yearWeekend * 2000) + (s.monthWeekend * 500);
                     } else {
                         // Weekday penalty
-                        // Adjusted: Nonlinear to prevent clustering (max 6 shifts/month)
-                        // Yearly: 200 per service. 
-                        // Monthly: Quadratic (50 * count^2). 
-                        // 1: 50, 2: 200, 3: 450, 4: 800, 5: 1250, 6: 1800.
-                        penalty = (s.yearWeekday * 200) + (Math.pow(s.monthWeekday, 2) * 50);
+                        // Adjusted: Unified Penalty Base (Week + Weekend) to ensure even distribution.
+                        // Adjusted Aggressively for FLAT distribution:
+                        // Yearly: 500 per service (Strong equalizer).
+                        // Monthly: Quadratic (150 * count^2). Very steep rise.
+                        // 1st (0->1): 150. 2nd (1->2): 600. 3rd (2->3): 1350.
+                        penalty = (s.yearTotal * 500) + (Math.pow(s.monthTotal, 2) * 150);
 
                         // Soft Cap: If Total Monthly Shifts (Week + Weekend) >= 6, Add Huge Penalty
                         // This prevents someone with a Weekend block from getting 4 more weekday shifts.
