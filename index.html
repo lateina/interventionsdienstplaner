@@ -1773,6 +1773,19 @@
                 });
             }
 
+            getEmployeeStats(empId) {
+                let total = 0;
+                let weekend = 0;
+                this.dates.forEach(d => {
+                    const st = this.state[empId]?.[d.dateStr];
+                    if (st && st.type === 'D') {
+                        total++;
+                        if (d.isWeekend || d.holiday) weekend++;
+                    }
+                });
+                return { total, weekend, weekday: total - weekend };
+            }
+
             distributeServices(monthIndex) {
                 const monthName = new Date(CONFIG.year, monthIndex, 1).toLocaleString('de-DE', { month: 'long' });
                 if (!confirm(`Dienste für Monat ${monthName} automatisch verteilen? Bestehende Zuteilungen (Lila) bleiben erhalten, nur Lücken werden gefüllt.`)) return;
@@ -1781,15 +1794,59 @@
 
                 const monthDates = this.dates.filter(d => d.month === monthIndex);
 
+                // Initialize Live Stats for Balancing
+                const currentStats = {};
+                CONFIG.employees.forEach(emp => {
+                    const ytd = this.getEmployeeStats(emp.id);
+                    currentStats[emp.id] = {
+                        yearTotal: ytd.total,
+                        yearWeekend: ytd.weekend,
+                        yearWeekday: ytd.weekday,
+                        monthTotal: 0,
+                        monthWeekend: 0,
+                        monthWeekday: 0
+                    };
+                });
+
+                // Helper to update stats
+                const incrementStats = (empId, isWeekendOrHoliday) => {
+                    const s = currentStats[empId];
+                    s.yearTotal++;
+                    s.monthTotal++;
+                    if (isWeekendOrHoliday) {
+                        s.yearWeekend++;
+                        s.monthWeekend++;
+                    } else {
+                        s.yearWeekday++;
+                        s.monthWeekday++;
+                    }
+                };
+
                 // Helper to get score
-                const getScore = (empId, dateStr) => {
+                // NOW INCLUDES LOAD BALANCING PENALTIES
+                const getScore = (empId, dateStr, isWeekendOrHoliday) => {
                     const st = this.state[empId]?.[dateStr];
-                    if (!st) return 0;
+                    if (!st) {
+                        // Base Score for empty slot
+                        let score = 0;
+                        const s = currentStats[empId];
+
+                        // PENALTIES
+                        if (isWeekendOrHoliday) {
+                            // Heavy penalty for uneven monthly weekends (blocks hoarding)
+                            score -= (s.yearWeekend * 50) + (s.monthWeekend * 1000);
+                        } else {
+                            // Weekday penalty
+                            score -= (s.yearWeekday * 20) + (s.monthWeekday * 500);
+                        }
+                        return score;
+                    }
+
                     if (st.type === 'A') return -10000; // Forbidden
-                    if (st.type === 'I') return 100;
-                    if (st.type === 'M') return 10;
-                    if (st.type === 'K') return -100;
-                    return 0;
+                    if (st.type === 'I') return 100;    // Preferred
+                    if (st.type === 'M') return 10;     // Possible
+                    if (st.type === 'K') return -100;   // Avoid
+                    return 0; // Should not happen for pre-filled, but fallback
                 };
 
                 // Helper to check absence
@@ -1844,6 +1901,14 @@
                     const isBlockTouched = blockDates.some(d => isDayAssigned(d.dateStr));
                     if (isBlockTouched) {
                         blockDates.forEach(d => usageMap[d.dateStr] = 'manual');
+                        // Update stats for manual assignments to keep balance correct
+                        blockDates.forEach(d => {
+                            CONFIG.employees.forEach(emp => {
+                                if (isEmpAssignedOnDate(emp.id, d.dateStr)) {
+                                    incrementStats(emp.id, true);
+                                }
+                            });
+                        });
                         return;
                     }
 
@@ -1860,18 +1925,20 @@
                         const prevDayStr = getAdjacentDateStr(fri.dateStr, -1);
                         if (isEmpAssignedOnDate(emp.id, prevDayStr)) return;
 
-                        // Score
+                        // Score - Calculate for Block
+                        // We use the penalty only ONCE per block to avoid triple counting, 
+                        // or average it. Simple approach: Sum scores.
                         let score = 0;
 
-                        // 2-Month Rule Bonus (Catch-up)
+                        // 2-Month Rule Bonus (Catch-up) - Kept for legacy compatibility, but stats should handle this now.
                         if (monthIndex > 0) {
                             if (!this.hasWeekendService(monthIndex - 1, emp.id)) {
-                                score += 1000;
+                                score += 500; // Reduced bonus as stats are primary now
                             }
                         }
 
                         blockDates.forEach(d => {
-                            score += getScore(emp.id, d.dateStr);
+                            score += getScore(emp.id, d.dateStr, true);
                         });
 
                         // Random tie-break
@@ -1889,6 +1956,7 @@
                             if (!this.state[bestEmp]) this.state[bestEmp] = {};
                             this.state[bestEmp][d.dateStr] = { type: 'D' };
                             usageMap[d.dateStr] = bestEmp;
+                            incrementStats(bestEmp, true); // Update Live Stats
                         });
                     }
                 });
@@ -1896,7 +1964,15 @@
                 // 3. Fill Weekdays (Mon-Thu)
                 monthDates.forEach(d => {
                     if (usageMap[d.dateStr]) return; // Already handled (assigned or skipped)
-                    if (isDayAssigned(d.dateStr)) return; // Already manually assigned
+                    if (isDayAssigned(d.dateStr)) {
+                        // Update stats for manual assignments
+                        CONFIG.employees.forEach(emp => {
+                            if (isEmpAssignedOnDate(emp.id, d.dateStr)) {
+                                incrementStats(emp.id, false);
+                            }
+                        });
+                        return;
+                    }
                     if (d.isWeekend) return;
 
                     let bestEmp = null;
@@ -1907,16 +1983,13 @@
 
                         // NEW CONSTRAINT: Check Previous Day (-1) and Next Day (+1)
                         // If assigned on either adjacent day, reject.
-                        // This handles Sun->Mon (Sun is D-1 for Mon)
-                        // Mon->Tue (Mon is D-1 for Tue)
-                        // etc.
                         const prevDayStr = getAdjacentDateStr(d.dateStr, -1);
                         const nextDayStr = getAdjacentDateStr(d.dateStr, 1);
 
                         if (isEmpAssignedOnDate(emp.id, prevDayStr)) return;
                         if (isEmpAssignedOnDate(emp.id, nextDayStr)) return;
 
-                        let score = getScore(emp.id, d.dateStr);
+                        let score = getScore(emp.id, d.dateStr, false); // False = Weekday
                         score += Math.random();
 
                         if (score > bestScore) {
@@ -1928,6 +2001,7 @@
                     if (bestEmp) {
                         if (!this.state[bestEmp]) this.state[bestEmp] = {};
                         this.state[bestEmp][d.dateStr] = { type: 'D' };
+                        incrementStats(bestEmp, false); // Update Live Stats
                     }
                 });
 
