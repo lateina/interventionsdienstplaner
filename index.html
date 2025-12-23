@@ -1936,10 +1936,17 @@
                         // or average it. Simple approach: Sum scores.
                         let score = 0;
 
-                        // 2-Month Rule Bonus (Catch-up) - Kept for legacy compatibility, but stats should handle this now.
+                        // 2-Month Rule ENFORCEMENT (Stronger than Yearly Catch-up)
+                        // If worked Last Month (M-1) -> Huge Penalty (soft block)
                         if (monthIndex > 0) {
-                            if (!this.hasWeekendService(monthIndex - 1, emp.id)) {
-                                score += 500; // Reduced bonus as stats are primary now
+                            if (this.hasWeekendService(monthIndex - 1, emp.id)) {
+                                score -= 50000; // Block consecutive months
+                            }
+                        }
+                        // If worked 2 Months Ago (M-2) -> Strong Penalty
+                        if (monthIndex > 1) {
+                            if (this.hasWeekendService(monthIndex - 2, emp.id)) {
+                                score -= 10000; // Discourage 3-month chains
                             }
                         }
 
