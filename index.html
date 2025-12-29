@@ -2256,13 +2256,22 @@
                 CONFIG.employees.forEach(emp => {
                     const st = this.state.__STATUS__[emp.id];
                     if (st) {
-                        const finishedMonths = [...new Set(Object.keys(st).filter(k => st[k]).map(k => {
-                            // k = "2026-01"
+                        // 1. Extract and Deduplicate Month Indices
+                        const indices = new Set();
+                        Object.keys(st).forEach(k => {
+                            if (!st[k]) return;
                             const parts = k.split('-');
-                            if (parts.length < 2) return k;
+                            if (parts.length < 2) return;
                             const mIndex = parseInt(parts[1]) - 1;
-                            return new Date(2026, mIndex, 1).toLocaleString('de-DE', { month: 'short' });
-                        }))];
+                            if (!isNaN(mIndex) && mIndex >= 0 && mIndex < 12) {
+                                indices.add(mIndex);
+                            }
+                        });
+
+                        // 2. Sort and Map to Names
+                        const finishedMonths = Array.from(indices)
+                            .sort((a, b) => a - b)
+                            .map(idx => new Date(2026, idx, 1).toLocaleString('de-DE', { month: 'short' }));
                         if (finishedMonths.length > 0) {
                             text += `${emp.name}: ${finishedMonths.join(', ')} fertig\n`;
                         }
