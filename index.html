@@ -2185,12 +2185,14 @@
                         btn.disabled = false; // Clickable to revoke
                         btn.innerText = 'Fertig';
                         btn.style.background = '#ccc';
+                        btn.style.opacity = '0.5';
                         btn.style.cursor = 'pointer';
                         btn.title = 'Klicken zum Zurücksetzen';
                     } else {
                         btn.disabled = false;
                         btn.innerText = 'Fertig melden';
                         btn.style.background = 'var(--primary-color)';
+                        btn.style.opacity = '1';
                         btn.style.cursor = 'pointer';
                         btn.title = 'Monat als fertig markieren';
                     }
