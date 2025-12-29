@@ -1817,7 +1817,7 @@
 
                 const idx = (typeof monthIndex === 'number') ? monthIndex : (this.currentMonthIndex || 0);
                 const monthStr = new Date(2026, idx, 1).toLocaleString('de-DE', { month: 'short' });
-                const key = `2026 - ${String(idx + 1).padStart(2, '0')} `;
+                const key = `2026-${String(idx + 1).padStart(2, '0')}`;
 
                 if (!this.state.__STATUS__) this.state.__STATUS__ = {};
                 if (!this.state.__STATUS__[this.currentUser]) this.state.__STATUS__[this.currentUser] = {};
