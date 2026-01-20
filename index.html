@@ -187,7 +187,7 @@
 
         /* Grid Cells */
         .cell {
-            padding: 5px;
+            padding: 2px;
             border-bottom: 1px solid var(--border-color);
             border-right: 1px solid var(--border-color);
             display: flex;
@@ -260,20 +260,22 @@
 
         /* Cell Content (Text) */
         .cell-text {
-            font-size: 0.6rem;
-            color: #333;
+            font-size: 0.65rem;
+            color: inherit;
             font-weight: bold;
             pointer-events: none;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            max-width: 100%;
-            padding: 0 2px;
+            overflow: visible;
+            white-space: normal;
+            word-break: break-all;
+            line-height: 1;
+            text-align: center;
+            z-index: 10;
+            position: relative;
         }
 
         .status-service {
             background-color: var(--status-service) !important;
-            color: white;
+            color: white !important;
         }
 
         .status-absent {
@@ -430,17 +432,17 @@
 
         .status-possible {
             background-color: var(--status-possible) !important;
-            color: white;
+            color: white !important;
         }
 
         .status-avoid {
             background-color: var(--status-avoid) !important;
-            color: white;
+            color: white !important;
         }
 
         .status-assigned {
             background-color: var(--status-assigned) !important;
-            color: white;
+            color: white !important;
         }
 
         /* Warning Footer */
@@ -672,6 +674,12 @@
                 <input type="radio" name="mode" value="A" onchange="app.setMode('A')">
                 <span style="font-weight: bold; color: var(--danger-color);">Abwesend (A)</span>
             </label>
+            <!-- NEW: Free Text Field -->
+            <div style="display: flex; align-items: center; padding-left: 10px; border-left: 1px solid #ccc;">
+                <input type="text" id="customTextInput" placeholder="Bemerkung"
+                    style="padding: 5px; border: 1px solid #ccc; border-radius: 4px; width: 150px;"
+                    oninput="app.setCustomText(this.value)">
+            </div>
         </div>
 
         <div class="legend" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
@@ -1168,7 +1176,7 @@
 
                 if (isActive) {
                     // Use current Mode (I or A)
-                    this.state[empId][dateStr] = { type: this.currentMode, text: '' };
+                    this.state[empId][dateStr] = { type: this.currentMode, text: this.currentText || '' };
                 } else {
                     if (this.state[empId][dateStr]) delete this.state[empId][dateStr];
                 }
@@ -1192,14 +1200,12 @@
                         }
                         if (st.text) {
                             cell.classList.add('has-text');
-                            // Ensure text is set (though usually handled by render, we might need it here if toggling logic didn't set it? 
-                            // Wait, setService usually sets empty text on creation.
-                            // If text existed before, it might stay.
-                            // But setService is "isActive" -> type: mode, text: ''.
-                            // So simple toggle clears text anyway if rewritten.
-                            // But if we're just updating UI:
-                            // If we are deleting (isActive=false), we fall to ELSE block below?
-                            // No, this block is if(state exists).
+                            if (st.text) {
+                                cell.classList.add('has-text');
+                                cell.innerHTML = `<span class="cell-text">${st.text}</span>`;
+                            } else {
+                                cell.innerHTML = ''; // Clear text if none
+                            }
                         }
                     } else {
                         // State deleted
@@ -1223,6 +1229,13 @@
                 // Stadler Check
                 if (empId === 'stadler' && dateStr >= '2026-07-01') return;
 
+                // ADMIN PROTECTION: Prevent non-admins from overwriting 'D' (Dienst)
+                const existing = this.state[empId]?.[dateStr];
+                if (existing && existing.type === 'D' && this.currentUser !== 'admin') {
+                    // console.log("Blocked overwriting Admin Service");
+                    return;
+                }
+
                 this.isDragging = true;
                 this.dragEmpId = empId;
 
@@ -1230,9 +1243,24 @@
                 // If it HAS the SAME service type as current mode -> REMOVE.
                 // If Empty OR Different type -> ADD/REPLACE.
                 const currentCell = this.state[empId]?.[dateStr];
-                const isSameMode = currentCell && currentCell.type === this.currentMode;
 
-                this.dragState = !isSameMode;
+                // Logic Update: Compare MODE and TEXT
+                // If Mode is same AND Text is same (or both empty), then we act as "Remove" (toggle off).
+                // Otherwise (different mode OR different text), we "Add/Update".
+                const currentTextInCell = currentCell ? (currentCell.text || '') : '';
+                const newText = this.currentText || '';
+
+                const isSameMode = currentCell && currentCell.type === this.currentMode;
+                const isSameText = currentTextInCell === newText;
+
+                // Drag State: true = add/update, false = remove
+                // If it's exactly the same content, we remove it (toggle).
+                // If anything is different, we overwrite it (add).
+                if (isSameMode && isSameText) {
+                    this.dragState = false;
+                } else {
+                    this.dragState = true;
+                }
 
                 // Apply to initial cell
                 this.setService(empId, dateStr, this.dragState, true); // skipSave true for performance
@@ -1244,6 +1272,10 @@
 
                 // Stadler Check
                 if (empId === 'stadler' && dateStr >= '2026-07-01') return;
+
+                // ADMIN PROTECTION: Prevent dragging over 'D' (Dienst)
+                const existing = this.state[empId]?.[dateStr];
+                if (existing && existing.type === 'D' && this.currentUser !== 'admin') return;
 
                 this.setService(empId, dateStr, this.dragState, true);
             }
@@ -1358,8 +1390,8 @@
                     const tooltip = document.getElementById('custom-tooltip');
                     tooltip.innerText = status.text;
                     tooltip.style.display = 'block';
-                    tooltip.style.left = (e.pageX + 10) + 'px';
-                    tooltip.style.top = (e.pageY + 10) + 'px';
+                    tooltip.style.left = (e.clientX + 10) + 'px';
+                    tooltip.style.top = (e.clientY + 10) + 'px';
                 }
             }
 
