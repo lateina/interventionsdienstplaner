@@ -2002,9 +2002,9 @@
                     // 2. Base Score (Wishes)
                     let baseScore = 0;
                     if (st) {
-                        if (st.type === 'I') baseScore = 100;    // Preferred
+                        if (st.type === 'I') baseScore = 50000;    // Preferred (Very Strong)
                         else if (st.type === 'M') baseScore = 10; // Possible
-                        else if (st.type === 'K') baseScore = -100; // Avoid
+                        else if (st.type === 'K') baseScore = -50000; // Avoid (Strong)
                     }
 
                     // 3. Load Balancing Penalty
@@ -2012,8 +2012,8 @@
                     let penalty = 0;
                     if (isWeekendOrHoliday) {
                         // Heavy penalty for uneven monthly weekends (blocks hoarding)
-                        // Adjusted Aggressively: Yearly (2000) >>> Monthly (500)
-                        penalty = (s.yearWeekend * 2000) + (s.monthWeekend * 500);
+                        // Adjusted Aggressively: Yearly (3500) >>> Monthly (500)
+                        penalty = (s.yearWeekend * 3500) + (s.monthWeekend * 500);
                     } else {
                         // Weekday penalty
                         // Adjusted: Unified Penalty Base (Week + Weekend) to ensure even distribution.
@@ -2111,7 +2111,7 @@
                         // If worked Last Month (M-1) -> Huge Penalty (soft block)
                         if (monthIndex > 0) {
                             if (this.hasWeekendService(monthIndex - 1, emp.id)) {
-                                score -= 50000; // Block consecutive months
+                                score -= 5000; // Discourage consecutive months (was 50000)
                             }
                         }
                         // If worked 2 Months Ago (M-2) -> Strong Penalty
@@ -2125,7 +2125,7 @@
                         // If they already have ANY weekend shifts this month, BAN them from taking another block.
                         const s = currentStats[emp.id];
                         if (s.monthWeekend > 0) {
-                            score -= 50000;
+                            score -= 5000; // Discourage double weekends (was 50000)
                         }
 
                         blockDates.forEach(d => {
